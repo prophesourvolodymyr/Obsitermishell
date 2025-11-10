@@ -1,0 +1,192 @@
+/* Obsitermishell Styles */
+
+/* Note: xterm.js CSS is loaded automatically when Terminal is imported in TerminalView.ts */
+
+/* Terminal view container */
+.obsitermishell-view {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--background-primary);
+}
+
+/* Terminal header with tabs */
+.obsitermishell-header {
+  display: flex;
+  align-items: center;
+  padding: 8px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  background-color: var(--background-secondary);
+  gap: 8px;
+}
+
+/* Terminal tabs */
+.obsitermishell-tabs {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+  overflow-x: auto;
+}
+
+.obsitermishell-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 4px;
+  background-color: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  cursor: pointer;
+  white-space: nowrap;
+  font-size: 12px;
+  transition: background-color 0.15s;
+}
+
+.obsitermishell-tab:hover {
+  background-color: var(--background-modifier-hover);
+}
+
+.obsitermishell-tab.active {
+  background-color: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border-color: var(--interactive-accent);
+}
+
+.obsitermishell-tab-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 2px;
+  opacity: 0.6;
+}
+
+.obsitermishell-tab-close:hover {
+  opacity: 1;
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Terminal actions */
+.obsitermishell-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.obsitermishell-action-button {
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  border: 1px solid var(--background-modifier-border);
+  background-color: var(--background-primary);
+  transition: background-color 0.15s;
+}
+
+.obsitermishell-action-button:hover {
+  background-color: var(--background-modifier-hover);
+}
+
+/* Terminal container */
+.obsitermishell-terminal-container {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  padding: 8px;
+}
+
+.obsitermishell-terminal {
+  width: 100%;
+  height: 100%;
+}
+
+/* xterm.js overrides */
+.obsitermishell-terminal .xterm {
+  height: 100%;
+  padding: 0;
+}
+
+.obsitermishell-terminal .xterm-viewport {
+  overflow-y: auto;
+}
+
+/* Mobile notice */
+.obsitermishell-mobile-notice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 32px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.obsitermishell-mobile-notice-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.obsitermishell-mobile-notice-title {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.obsitermishell-mobile-notice-message {
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* Settings */
+.obsitermishell-settings-profile {
+  padding: 12px;
+  margin: 8px 0;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  background-color: var(--background-secondary);
+}
+
+.obsitermishell-settings-profile-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.obsitermishell-settings-profile-name {
+  font-weight: 600;
+}
+
+.obsitermishell-settings-profile-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Context menu (if custom implementation needed) */
+.obsitermishell-context-menu {
+  position: absolute;
+  z-index: 1000;
+  background-color: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  padding: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.obsitermishell-context-menu-item {
+  padding: 6px 12px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.15s;
+}
+
+.obsitermishell-context-menu-item:hover {
+  background-color: var(--background-modifier-hover);
+}
+
+.obsitermishell-context-menu-separator {
+  height: 1px;
+  background-color: var(--background-modifier-border);
+  margin: 4px 0;
+}

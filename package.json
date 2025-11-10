@@ -1,0 +1,42 @@
+{
+  "name": "obsitermishell",
+  "version": "0.1.0",
+  "description": "Embedded terminal for Obsidian Desktop with PTY, multiple sessions, and auto-cd support",
+  "main": "main.js",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+    "rebuild": "electron-rebuild -f -w node-pty",
+    "check": "tsc -noEmit",
+    "format": "prettier --write .",
+    "postinstall": "electron-rebuild -f -w node-pty"
+  },
+  "keywords": [
+    "obsidian",
+    "terminal",
+    "shell",
+    "pty",
+    "xterm"
+  ],
+  "author": "prophesourvolodymyr",
+  "license": "MIT",
+  "devDependencies": {
+    "@electron/rebuild": "^3.6.0",
+    "@types/node": "^20.11.0",
+    "@typescript-eslint/eslint-plugin": "^6.19.0",
+    "@typescript-eslint/parser": "^6.19.0",
+    "builtin-modules": "^3.3.0",
+    "esbuild": "0.19.11",
+    "obsidian": "latest",
+    "prettier": "^3.2.4",
+    "tslib": "^2.6.2",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "@xterm/addon-fit": "^0.10.0",
+    "@xterm/addon-search": "^0.15.0",
+    "@xterm/addon-web-links": "^0.11.0",
+    "@xterm/xterm": "^5.5.0",
+    "node-pty": "^1.0.0"
+  }
+}
