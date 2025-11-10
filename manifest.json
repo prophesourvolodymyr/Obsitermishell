@@ -1,0 +1,10 @@
+{
+  "id": "obsitermishell",
+  "name": "Obsitermishell",
+  "version": "0.1.0",
+  "minAppVersion": "1.4.0",
+  "description": "Embedded terminal for Obsidian Desktop with PTY, multiple sessions, and auto-cd support",
+  "author": "prophesourvolodymyr",
+  "authorUrl": "https://github.com/prophesourvolodymyr/Obsitermishell",
+  "isDesktopOnly": true
+}

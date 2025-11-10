@@ -1,0 +1,33 @@
+# Build outputs (keep main.js and main.css for Obsidian)
+main.js.map
+dist/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Dependency directories
+node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# node-pty build artifacts
+build/
+Release/
+
+# Obsidian
+.obsidian/
+data.json

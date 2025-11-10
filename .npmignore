@@ -1,0 +1,39 @@
+# Source files
+src/
+*.ts
+tsconfig.json
+esbuild.config.mjs
+
+# Documentation
+CODEBASE-Quick Start.md
+CONTRIBUTING.md
+PROGRESS.md
+QA_CHECKLIST.md
+RELEASE_CHECKLIST.md
+SETUP.md
+IDEAS_MOBILE.md
+
+# Development files
+.github/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Build artifacts
+node_modules/
+package-lock.json
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Scripts
+rebuild.sh
+
+# Logs
+*.log
+npm-debug.log*
