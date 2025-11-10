@@ -2,7 +2,7 @@
  * Obsitermishell Type Definitions
  */
 
-import { IPty } from 'node-pty';
+import type { PTYController } from './PTYController';
 
 /**
  * Auto-CD modes for terminal working directory
@@ -60,7 +60,7 @@ export const DEFAULT_SETTINGS: ObsitermishellSettings = {
 export interface TerminalSession {
 	id: string;
 	name: string;
-	pty: IPty;
+	pty: PTYController;
 	cwd: string;
 	profile?: TerminalProfile;
 	createdAt: Date;

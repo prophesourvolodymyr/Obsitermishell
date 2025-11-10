@@ -21,7 +21,6 @@ export class TerminalView extends ItemView {
 	private terminals: Map<string, Terminal> = new Map();
 	private fitAddons: Map<string, FitAddon> = new Map();
 	private searchAddons: Map<string, SearchAddon> = new Map();
-	private containerEl: HTMLElement | null = null;
 	private headerEl: HTMLElement | null = null;
 	private tabsEl: HTMLElement | null = null;
 	private actionsEl: HTMLElement | null = null;

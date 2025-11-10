@@ -80,8 +80,8 @@ export class ObsitermishellSettingTab extends PluginSettingTab {
 					.addOption('active', 'Active Note Folder')
 					.addOption('sticky', 'Sticky (Manual)')
 					.setValue(this.plugin.settings.defaultCwdMode)
-					.onChange(async (value: 'vault' | 'active' | 'sticky') => {
-						this.plugin.settings.defaultCwdMode = value;
+					.onChange(async (value) => {
+						this.plugin.settings.defaultCwdMode = value as 'vault' | 'active' | 'sticky';
 						await this.plugin.saveSettings();
 					})
 			);
@@ -243,8 +243,8 @@ export class ObsitermishellSettingTab extends PluginSettingTab {
 					.addOption('active', 'Active Note Folder')
 					.addOption('sticky', 'Sticky (Manual)')
 					.setValue(profile.cwdMode)
-					.onChange(async (value: 'vault' | 'active' | 'sticky') => {
-						profile.cwdMode = value;
+					.onChange(async (value) => {
+						profile.cwdMode = value as 'vault' | 'active' | 'sticky';
 						await this.plugin.saveSettings();
 					})
 			);

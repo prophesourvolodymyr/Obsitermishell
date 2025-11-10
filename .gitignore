@@ -1,7 +1,5 @@
-# Build outputs
-main.js
+# Build outputs (keep main.js and main.css for Obsidian)
 main.js.map
-*.js.map
 dist/
 
 # Logs

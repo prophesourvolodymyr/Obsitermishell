@@ -12,9 +12,9 @@ import { ObsitermishellSettings, DEFAULT_SETTINGS, CwdMode } from './types';
 import { PlatformDetector } from './utils/platform-detector';
 
 export default class ObsitermishellPlugin extends Plugin {
-	settings: ObsitermishellSettings;
-	terminalManager: TerminalManager;
-	pathResolver: VaultPathResolver;
+	settings!: ObsitermishellSettings;
+	terminalManager!: TerminalManager;
+	pathResolver!: VaultPathResolver;
 	private autoCdEnabled = false;
 
 	async onload() {
