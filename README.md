@@ -35,15 +35,28 @@
 
 ## 🚀 Installation
 
-### Prerequisites
+### From Community Plugins (Recommended - Coming Soon!)
+
+Once approved in Obsidian Community Plugins:
+
+1. Open Obsidian Settings → **Community Plugins**
+2. Click **Browse** → Search for "**Obsitermishell**"
+3. Click **Install** → Enable the plugin
+4. Click the terminal icon in the sidebar to start!
+
+> **Note:** The plugin is currently pending Community Plugin approval. Use "Install from Source" below in the meantime.
+
+### From Source (Manual Installation)
+
+#### Prerequisites
 - **Obsidian Desktop** (macOS, Windows, or Linux)
-- **Node.js v18+** (for building)
+- **Node.js v18+** (for rebuilding native modules)
 - **Build Tools:**
   - macOS: Xcode Command Line Tools (`xcode-select --install`)
   - Windows: Visual Studio Build Tools
   - Linux: `build-essential` package
 
-### Install from Source
+#### Install Steps
 
 1. **Clone the repository:**
    ```bash

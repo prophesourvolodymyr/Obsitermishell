@@ -192,27 +192,96 @@ npm install --ignore-scripts
 
 ### For Obsidian Community Plugins
 
-To submit to Obsidian Community Plugins:
+#### Initial Submission
 
-1. **Build for production:**
+To submit to Obsidian Community Plugins for the first time:
+
+1. **Prepare files:**
+   - `manifest.json` - Plugin metadata
+   - `versions.json` - Version compatibility tracker
+   - `main.js` - Compiled plugin (from `npm run build`)
+   - `styles.css` - Plugin styles
+
+2. **Update versions.json:**
+   ```json
+   {
+     "0.1.0": "1.4.0"
+   }
+   ```
+   Format: `"plugin-version": "minimum-obsidian-version"`
+
+3. **Build for production:**
    ```bash
    npm run build
    ```
 
-2. **Required files:**
-   - `main.js` (compiled plugin)
-   - `manifest.json` (plugin metadata)
-   - `styles.css` (plugin styles)
+4. **Create GitHub release:**
 
-3. **Create release:**
+   **Option A: Automated (GitHub Actions)**
    ```bash
-   git tag -a 0.1.0 -m "Release v0.1.0"
+   git tag -a 0.1.0 -m "v0.1.0 - Initial release"
    git push origin 0.1.0
    ```
+   GitHub Actions workflow (`.github/workflows/release.yml`) will:
+   - Build the plugin
+   - Create a draft release
+   - Attach required files automatically
 
-4. **Upload to GitHub:**
+   **Option B: Manual**
+   ```bash
+   git tag -a 0.1.0 -m "v0.1.0"
+   git push origin 0.1.0
+   ```
+   Then on GitHub:
    - Go to Releases → Create new release
-   - Attach: `main.js`, `manifest.json`, `styles.css`
+   - Choose tag `0.1.0`
+   - **Attach:** `main.js`, `manifest.json`, `styles.css`
+   - Publish release
+
+5. **Submit to Community Plugins:**
+   - Fork https://github.com/obsidianmd/obsidian-releases
+   - Edit `community-plugins.json`, add entry:
+     ```json
+     {
+       "id": "obsitermishell",
+       "name": "Obsitermishell",
+       "author": "prophesourvolodymyr",
+       "description": "Embedded terminal for Obsidian Desktop with PTY, multiple sessions, and auto-cd support",
+       "repo": "prophesourvolodymyr/Obsitermishell"
+     }
+     ```
+   - Create Pull Request
+   - See [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md) for full submission guide
+
+#### Future Updates
+
+After initial approval, updates are automatic:
+
+1. **Update version** in `manifest.json` and `package.json`:
+   ```json
+   {
+     "version": "0.2.0"
+   }
+   ```
+
+2. **Update versions.json:**
+   ```json
+   {
+     "0.1.0": "1.4.0",
+     "0.2.0": "1.4.0"
+   }
+   ```
+
+3. **Build and tag:**
+   ```bash
+   npm run build
+   git tag -a 0.2.0 -m "v0.2.0"
+   git push origin 0.2.0
+   ```
+
+4. **Create release** (manual or automated)
+
+5. **No PR needed** - Obsidian auto-detects new releases!
 
 ### For Manual Distribution
 
