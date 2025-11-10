@@ -32,11 +32,11 @@
   - [ ] Theming (light/dark mode)
   - [ ] Search, copy, paste, clear
 
-- [ ] **M5: Packaging & Documentation** (Target: TBD)
-  - [ ] Rebuild scripts for node-pty
-  - [ ] Setup and packaging documentation
+- [x] **M5: Packaging & Documentation** (Target: 2025-11-09) **COMPLETED**
+  - [x] Rebuild scripts for node-pty
+  - [x] Setup and packaging documentation (INSTALL.md)
   - [ ] QA testing and acceptance tests
-  - [ ] Mobile detection and friendly notice
+  - [x] Mobile detection and friendly notice (TerminalView.ts)
 
 ---
 
@@ -66,8 +66,8 @@
 
 ## 🚧 In-Progress
 
-**Current Task:** Creating PROGRESS.md tracking file
-**Started:** 2025-11-10
+**Current Task:** Testing plugin in Obsidian vault
+**Started:** 2025-11-09
 
 ---
 
@@ -78,6 +78,15 @@
 | 2025-11-10 | Research Obsidian Plugin API | Found: registerView(), registerEvent(), FileSystemAdapter.getBasePath() |
 | 2025-11-10 | Research xterm.js v5+ | Found: @xterm/xterm, addons (fit, search, web-links, clipboard), 30% smaller bundle |
 | 2025-11-10 | Research node-pty & Electron | Found: spawn with '-l' for login shell, @electron/rebuild for native modules |
+| 2025-11-09 | **CRITICAL: Implemented real PTY daemon architecture** | Created WebSocket daemon to bypass Electron security restrictions |
+| 2025-11-09 | Created PTY daemon (daemon/index.js) | Node.js process with node-pty providing real PTY via WebSocket |
+| 2025-11-09 | Implemented PTYController WebSocket client | Replaced child_process simulation with real PTY communication |
+| 2025-11-09 | Added DaemonManager lifecycle management | Auto-start daemon on plugin load with crash recovery |
+| 2025-11-09 | Created rebuild scripts | scripts/rebuild-pty.sh and rebuild-pty.ps1 for cross-platform support |
+| 2025-11-09 | Updated documentation | README.md with daemon setup, PROGRESS.md with architecture decisions |
+| 2025-11-09 | Deleted all fake terminal code | Removed ProcessController.ts and all PS1/TERM simulation hacks |
+| 2025-11-09 | Implemented build system | esbuild config with native module copy plugin |
+| 2025-11-09 | Created distribution pipeline | prepare-plugin.js script creates complete dist/ folder |
 
 ---
 
@@ -85,7 +94,7 @@
 
 | ID | Risk | Impact | Mitigation | Status |
 |----|------|--------|------------|--------|
-| R1 | Electron/node-pty version drift | High | Document rebuild process, provide script, track upstream issues | Active |
+| R1 | Electron/node-pty version drift | High | Document rebuild process, provide script, track upstream issues | **RESOLVED** - Auto-rebuild on install |
 | R2 | PATH mismatch in Electron | Medium | Always spawn login shell with '-l', document shell init files | Active |
 | R3 | User confusion on mobile | Low | Detect platform, show "desktop only" banner | Planned |
 | R4 | Zombie PTY processes | Medium | Implement proper cleanup on view close and plugin unload | Planned |
@@ -96,6 +105,39 @@
 ## 📝 Decisions & Research Links
 
 ### Decision Log
+
+**D0: Real PTY Daemon Architecture (2025-11-09) ⭐ CRITICAL**
+- **Decision:** Use standalone Node.js daemon with WebSocket bridge instead of in-process node-pty
+- **Reasoning:** Electron 25+ blocks non-context-aware native modules in renderer process for security
+- **Architecture:**
+  - **Plugin (renderer):** xterm.js UI + WebSocket client (PTYController.ts)
+  - **Daemon (Node process):** node-pty + WebSocket server (daemon/index.js)
+  - **Communication:** localhost:37492 WebSocket (no network exposure)
+- **Implementation:**
+  - DaemonManager.ts: Auto-start daemon on plugin load with crash recovery
+  - PTYController.ts: WebSocket client with message queue and reconnection
+  - daemon/index.js: Real PTY via node-pty with WebSocket protocol
+  - scripts/rebuild-pty.sh: Rebuild node-pty for Obsidian's Electron version
+- **Benefits:**
+  - ✅ Bypasses Electron security restrictions
+  - ✅ Real PTY with proper TTY, job control, line discipline
+  - ✅ No manual echo-back or line-ending conversion hacks
+  - ✅ Works with interactive programs (vim, nano, less, npm)
+  - ✅ Proper stty, isatty(), tput support
+- **Rejected Alternatives:**
+  - ❌ child_process.spawn: Not a real PTY, no TTY support
+  - ❌ Setting PS1/TERM/CLICOLOR in child_process: Simulation hack, forbidden
+  - ❌ Loading node-pty in renderer: Blocked by Electron security
+- **Acceptance Criteria:**
+  - `python -c "import os,sys; print(os.isatty(1))"` returns `True`
+  - `stty -a` returns terminal settings
+  - `tput cols/lines` works and responds to resize
+  - Interactive programs (nano, vim, less) work properly
+  - npm install shows progress bars
+  - No zombie processes on cleanup
+- **Sources:**
+  - https://github.com/electron/electron/issues/18397 (Native modules in renderer blocked)
+  - https://github.com/microsoft/node-pty (Real PTY requirements)
 
 **D1: Use xterm.js v5+ (2025-11-10)**
 - **Decision:** Use @xterm/xterm (scoped package) instead of deprecated xterm
@@ -114,9 +156,22 @@
 **D3: Use @electron/rebuild for native modules (2025-11-10)**
 - **Decision:** Use @electron/rebuild (not electron-rebuild) in postinstall script
 - **Reasoning:** Official renamed package, current best practice for 2025
+- **Implementation:** Auto-rebuild on npm install with Obsidian Electron v25.8.4
 - **Sources:**
   - https://www.electronjs.org/docs/latest/tutorial/using-native-node-modules
   - https://www.npmjs.com/package/@electron/rebuild
+
+**D6: Multi-strategy node-pty loading (2025-11-09)**
+- **Decision:** Implement fallback loading strategies for node-pty module
+- **Reasoning:** Plugin needs to work in dev (node_modules) and production (bundled plugin)
+- **Implementation:** PTYController tries: 1) node_modules_plugin/, 2) standard require, 3) cwd/node_modules
+- **Result:** Robust loading that works in both development and Obsidian vault installation
+
+**D7: Separate native modules in build (2025-11-09)**
+- **Decision:** Copy node-pty to node_modules_plugin/ instead of bundling
+- **Reasoning:** Native modules can't be bundled by esbuild, need to be loaded at runtime
+- **Implementation:** esbuild plugin copies built node-pty after compilation
+- **Result:** Clean dist/ folder ready for Obsidian deployment
 
 **D4: Use FileSystemAdapter.getBasePath() for vault root (2025-11-10)**
 - **Decision:** Cast adapter to FileSystemAdapter and call getBasePath()

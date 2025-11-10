@@ -91,7 +91,7 @@
   flex: 1;
   position: relative;
   overflow: hidden;
-  padding: 8px;
+  padding: 0;
 }
 
 .obsitermishell-terminal {
@@ -101,12 +101,35 @@
 
 /* xterm.js overrides */
 .obsitermishell-terminal .xterm {
-  height: 100%;
-  padding: 0;
+  height: 100% !important;
+  width: 100% !important;
+  padding: 4px;
 }
 
 .obsitermishell-terminal .xterm-viewport {
-  overflow-y: auto;
+  overflow-y: scroll;
+}
+
+/* Scrollbar styling */
+.obsitermishell-terminal .xterm-viewport::-webkit-scrollbar {
+  width: 12px;
+}
+
+.obsitermishell-terminal .xterm-viewport::-webkit-scrollbar-track {
+  background: var(--background-secondary);
+}
+
+.obsitermishell-terminal .xterm-viewport::-webkit-scrollbar-thumb {
+  background: var(--background-modifier-border);
+  border-radius: 6px;
+}
+
+.obsitermishell-terminal .xterm-viewport::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+.obsitermishell-terminal .xterm-screen {
+  height: 100% !important;
 }
 
 /* Mobile notice */

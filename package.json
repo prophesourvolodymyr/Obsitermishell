@@ -5,11 +5,13 @@
   "main": "main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",
-    "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
-    "rebuild": "electron-rebuild -f -w node-pty -v 28.2.10",
+    "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production && npm run postbuild",
+    "postbuild": "node scripts/prepare-plugin.js",
+    "rebuild": "npx @electron/rebuild -f -w node-pty",
+    "rebuild:obsidian": "npx @electron/rebuild -f -w node-pty -v 25.8.4",
     "check": "tsc -noEmit",
     "format": "prettier --write .",
-    "postinstall": "electron-rebuild -f -w node-pty -v 28.2.10"
+    "postinstall": "npm run rebuild:obsidian"
   },
   "keywords": [
     "obsidian",

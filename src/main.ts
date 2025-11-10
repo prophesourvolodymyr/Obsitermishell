@@ -10,18 +10,33 @@ import { VaultPathResolver } from './VaultPathResolver';
 import { ObsitermishellSettingTab } from './SettingsTab';
 import { ObsitermishellSettings, DEFAULT_SETTINGS, CwdMode } from './types';
 import { PlatformDetector } from './utils/platform-detector';
+import { DaemonManager } from './DaemonManager';
 
 export default class ObsitermishellPlugin extends Plugin {
 	settings!: ObsitermishellSettings;
 	terminalManager!: TerminalManager;
 	pathResolver!: VaultPathResolver;
+	daemonManager!: DaemonManager;
 	private autoCdEnabled = false;
 
 	async onload() {
-		console.log('Loading Obsitermishell plugin');
+		console.log('Loading Obsitermishell plugin (using real PTY daemon)');
 
 		// Load settings
 		await this.loadSettings();
+
+		// Initialize daemon manager
+		const pluginDir = (this.app.vault.adapter as any).getBasePath() + '/' + this.manifest.dir;
+		this.daemonManager = new DaemonManager(pluginDir);
+
+		// Start PTY daemon
+		try {
+			await this.daemonManager.start();
+			console.log('PTY daemon started successfully');
+		} catch (err) {
+			console.error('Failed to start PTY daemon:', err);
+			new Notice('Failed to start terminal daemon. Terminal functionality will not work.');
+		}
 
 		// Initialize path resolver
 		this.pathResolver = new VaultPathResolver(this.app);
@@ -55,11 +70,14 @@ export default class ObsitermishellPlugin extends Plugin {
 		}
 	}
 
-	onunload() {
+	async onunload() {
 		console.log('Unloading Obsitermishell plugin');
 
 		// Kill all terminal sessions
 		this.terminalManager.killAll();
+
+		// Stop PTY daemon
+		await this.daemonManager.stop();
 
 		// Detach terminal views
 		this.app.workspace.detachLeavesOfType(VIEW_TYPE_TERMINAL);
@@ -142,8 +160,8 @@ export default class ObsitermishellPlugin extends Plugin {
 			// Terminal view exists, activate it
 			leaf = leaves[0];
 		} else {
-			// Create new terminal view in right sidebar
-			leaf = workspace.getRightLeaf(false);
+			// Create new terminal view in left sidebar
+			leaf = workspace.getLeftLeaf(false);
 			if (leaf) {
 				await leaf.setViewState({
 					type: VIEW_TYPE_TERMINAL,

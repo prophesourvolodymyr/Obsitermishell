@@ -50,10 +50,10 @@ Once approved in Obsidian Community Plugins:
 
 #### Prerequisites
 - **Obsidian Desktop** (macOS, Windows, or Linux)
-- **Node.js v18+** (for rebuilding native modules)
+- **Node.js v18+** (for building and running daemon)
 - **Build Tools:**
   - macOS: Xcode Command Line Tools (`xcode-select --install`)
-  - Windows: Visual Studio Build Tools
+  - Windows: Visual Studio Build Tools or windows-build-tools
   - Linux: `build-essential` package
 
 #### Install Steps
@@ -61,37 +61,57 @@ Once approved in Obsidian Community Plugins:
 1. **Clone the repository:**
    ```bash
    cd /path/to/your/vault/.obsidian/plugins/
-   git clone https://github.com/prophesourvolodymyr/Obsitermishell.git
-   cd Obsitermishell
+   git clone https://github.com/prophesourvolodymyr/Obsitermishell.git obsitermishell
+   cd obsitermishell
    ```
 
-2. **Install dependencies:**
+2. **Install plugin dependencies:**
    ```bash
    npm install
    ```
 
-3. **Build the plugin:**
+3. **Install daemon dependencies:**
+   ```bash
+   cd daemon
+   npm install
+   cd ..
+   ```
+
+4. **Rebuild node-pty for Obsidian's Electron:**
+   ```bash
+   # macOS/Linux
+   ./scripts/rebuild-pty.sh
+
+   # Windows PowerShell
+   .\scripts\rebuild-pty.ps1
+   ```
+
+5. **Build the plugin:**
    ```bash
    npm run build
    ```
 
-4. **Rebuild native modules** (node-pty):
-   ```bash
-   npm run rebuild
-   # Or manually:
-   npx electron-rebuild -f -w node-pty
-   ```
-
-5. **Enable the plugin in Obsidian:**
+6. **Enable the plugin in Obsidian:**
    - Settings → Community Plugins → Reload plugins
    - Enable "Obsitermishell"
+   - The daemon will start automatically when the plugin loads
+
+### Architecture
+
+Obsitermishell uses a **real PTY daemon** architecture:
+
+- **Plugin (Obsidian renderer):** UI with xterm.js, WebSocket client
+- **Daemon (Node.js process):** Runs node-pty with real PTY capabilities
+- **Communication:** Local WebSocket on `localhost:37492` (no network exposure)
+
+This architecture bypasses Electron's security restrictions on native modules in the renderer process while providing a true PTY terminal experience.
 
 ### Post-Installation
 
 If Obsidian updates (which may change Electron version):
 ```bash
-cd /path/to/vault/.obsidian/plugins/Obsitermishell
-npm run rebuild
+cd /path/to/vault/.obsidian/plugins/obsitermishell
+./scripts/rebuild-pty.sh  # or rebuild-pty.ps1 on Windows
 ```
 
 ---
@@ -221,7 +241,8 @@ See [CODEBASE-Quick Start.md](CODEBASE-Quick%20Start.md) for detailed architectu
 src/
 ├── main.ts                    # Plugin entry point
 ├── TerminalView.ts            # Custom view with xterm.js
-├── PTYController.ts           # PTY process manager
+├── PTYController.ts           # WebSocket client for daemon
+├── DaemonManager.ts           # Daemon lifecycle management
 ├── TerminalManager.ts         # Multi-session manager
 ├── VaultPathResolver.ts       # Vault path detection
 ├── SettingsTab.ts             # Settings UI
@@ -230,6 +251,14 @@ src/
     ├── shell-detector.ts      # Shell detection
     ├── theme-manager.ts       # Theme sync
     └── platform-detector.ts   # Desktop/mobile detection
+
+daemon/
+├── index.js                   # PTY daemon (Node.js + node-pty)
+└── package.json               # Daemon dependencies
+
+scripts/
+├── rebuild-pty.sh             # Rebuild script (macOS/Linux)
+└── rebuild-pty.ps1            # Rebuild script (Windows)
 ```
 
 ---
@@ -238,26 +267,50 @@ src/
 
 ### Common Issues
 
+**Error: "Terminal daemon failed to start"**
+- **Cause:** Daemon dependencies not installed or node-pty not rebuilt
+- **Fix:**
+  1. `cd daemon && npm install`
+  2. Run `./scripts/rebuild-pty.sh` (or `.ps1` on Windows)
+  3. Reload the plugin in Obsidian
+- **Check:** Open DevTools console for daemon error messages
+
+**Error: "Failed to connect to daemon"**
+- **Cause:** Daemon not running or WebSocket connection failed
+- **Fix:**
+  1. Check console for daemon startup messages
+  2. Verify port 37492 is not blocked by firewall
+  3. Reload the plugin to restart daemon
+- **Check:** `lsof -i :37492` (macOS/Linux) or `netstat -ano | findstr 37492` (Windows)
+
+**Terminal not responding to input**
+- **Cause:** WebSocket connection dropped
+- **Fix:** Reload the plugin or create a new terminal session
+- **Check:** Console for WebSocket errors
+
 **Error: "Cannot find module '../build/Debug/pty.node'"**
-- **Cause:** node-pty not rebuilt for current Electron version
-- **Fix:** Run `npm run rebuild` in plugin directory
+- **Cause:** node-pty not rebuilt for Obsidian's Electron version
+- **Fix:** Run `./scripts/rebuild-pty.sh` in plugin directory
+- **Note:** This must be done in the `daemon/` subdirectory, not plugin root
 
 **PATH is incomplete / aliases don't work**
 - **Cause:** Shell not started as login shell
-- **Fix:** Verify Settings → Shell Path is empty (auto-detect), or manually set to `/bin/zsh -l`, `/bin/bash -l`, etc.
-- **Check:** Shell init files (`.zprofile`, `.bash_profile`, `.config/fish/config.fish`)
+- **Fix:** The daemon starts shells with login flags by default. Check your shell init files:
+  - bash: `~/.bash_profile` or `~/.profile`
+  - zsh: `~/.zprofile`
+  - fish: `~/.config/fish/config.fish`
 
 **Terminal doesn't appear**
 - **Cause:** Running on mobile or view failed to load
 - **Fix:** Obsitermishell is desktop-only. Check console for errors.
 
 **Terminal doesn't resize**
-- **Cause:** FitAddon not loaded
-- **Fix:** This should be automatic. Report as bug if persistent.
+- **Cause:** PTY resize message not sent
+- **Fix:** This should be automatic. Check console for errors.
 
 **Vault root is undefined**
-- **Cause:** FileSystemAdapter unavailable (mobile or unusual setup)
-- **Fix:** Terminal will fallback to `$HOME`. This is expected on mobile.
+- **Cause:** FileSystemAdapter unavailable (unusual setup)
+- **Fix:** Terminal will fallback to `$HOME`.
 
 ---
 

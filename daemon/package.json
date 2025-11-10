@@ -1,0 +1,27 @@
+{
+  "name": "obsitermishell-daemon",
+  "version": "0.1.0",
+  "description": "PTY daemon for Obsitermishell plugin",
+  "main": "index.js",
+  "bin": {
+    "obsitermishell-daemon": "./index.js"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "rebuild": "npm install"
+  },
+  "dependencies": {
+    "node-pty": "^1.0.0",
+    "ws": "^8.14.2"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^3.6.0"
+  },
+  "keywords": [
+    "pty",
+    "terminal",
+    "obsidian"
+  ],
+  "author": "prophesourvolodymyr",
+  "license": "MIT"
+}

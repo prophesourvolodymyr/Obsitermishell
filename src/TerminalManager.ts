@@ -23,14 +23,14 @@ export class TerminalManager extends EventEmitter {
 	/**
 	 * Create a new terminal session
 	 */
-	public createSession(options: TerminalSpawnOptions = {}): TerminalSession {
+	public async createSession(options: TerminalSpawnOptions = {}): Promise<TerminalSession> {
 		const sessionId = this.generateSessionId();
 
 		// Resolve working directory
 		const cwdMode = options.cwdMode || 'vault';
 		const cwd = options.cwd || this.pathResolver.getInitialCwd(cwdMode);
 
-		// Create PTY controller
+		// Create PTY controller (REAL PTY via daemon)
 		const pty = new PTYController();
 
 		// Determine shell
@@ -47,10 +47,12 @@ export class TerminalManager extends EventEmitter {
 			createdAt: new Date(),
 		};
 
-		// Spawn PTY
+		// Spawn REAL PTY (async)
 		try {
-			pty.spawn({
-				shell: options.shell,
+			const shellInfo = ShellDetector.detectShell();
+			await pty.spawn({
+				shell: options.shell || shellInfo.shell,
+				shellArgs: shellInfo.args,
 				cwd,
 				env: options.env,
 			});
@@ -135,7 +137,7 @@ export class TerminalManager extends EventEmitter {
 			return;
 		}
 
-		// Kill PTY if still alive
+		// Kill Process if still alive
 		if (session.pty.alive()) {
 			session.pty.kill();
 		}

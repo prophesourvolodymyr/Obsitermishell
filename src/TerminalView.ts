@@ -27,6 +27,8 @@ export class TerminalView extends ItemView {
 	private terminalContainerEl: HTMLElement | null = null;
 	private activeTerminalEl: HTMLElement | null = null;
 	private resizeObserver: ResizeObserver | null = null;
+	private firstCommandCaptured: Map<string, boolean> = new Map();
+	private commandBuffers: Map<string, string> = new Map();
 
 	constructor(leaf: WorkspaceLeaf, terminalManager: TerminalManager) {
 		super(leaf);
@@ -132,8 +134,26 @@ export class TerminalView extends ItemView {
 	/**
 	 * Create new terminal session
 	 */
-	private createNewTerminal(): void {
-		this.terminalManager.createSession();
+	private async createNewTerminal(): Promise<void> {
+		try {
+			await this.terminalManager.createSession();
+		} catch (error) {
+			console.error('Failed to create terminal:', error);
+			// Show user-friendly error
+			const errorDiv = this.terminalContainerEl!.createDiv({
+				cls: 'obsitermishell-error',
+			});
+			errorDiv.createEl('h3', { text: '❌ Failed to start terminal' });
+			errorDiv.createEl('p', {
+				text: error instanceof Error ? error.message : 'Unknown error',
+			});
+			errorDiv.createEl('p', {
+				text: 'Make sure the PTY daemon is running:',
+			});
+			errorDiv.createEl('code', {
+				text: 'cd daemon && npm start',
+			});
+		}
 	}
 
 	/**
@@ -142,7 +162,14 @@ export class TerminalView extends ItemView {
 	private clearActiveTerminal(): void {
 		const activeSession = this.terminalManager.getActiveSession();
 		if (activeSession) {
-			activeSession.pty.clear();
+			// Get the xterm.js terminal instance
+			const terminal = this.terminals.get(activeSession.id);
+			if (terminal) {
+				// Clear the terminal display buffer
+				terminal.clear();
+				// Also clear scrollback
+				terminal.clearSelection();
+			}
 		}
 	}
 
@@ -206,13 +233,14 @@ export class TerminalView extends ItemView {
 		terminalEl.id = `terminal-${session.id}`;
 		terminalEl.style.display = 'none'; // Hidden by default
 
-		// Create xterm.js Terminal
+		// Create xterm.js Terminal for REAL PTY
 		const terminal = new Terminal({
 			cursorBlink: true,
 			fontSize: 14,
 			fontFamily: 'Menlo, Monaco, "Courier New", monospace',
 			theme: ThemeManager.getObsidianTheme(),
 			scrollback: 10000,
+			// No special EOL conversion - PTY handles it properly
 		});
 
 		// Load addons
@@ -231,10 +259,44 @@ export class TerminalView extends ItemView {
 		// Fit to container
 		fitAddon.fit();
 
-		// Handle terminal input -> PTY
+		// Handle terminal input -> REAL PTY
+		// NO ECHOING - real PTY handles this automatically
 		terminal.onData((data) => {
 			session.pty.write(data);
+
+			// Capture first command for tab naming
+			if (!this.firstCommandCaptured.get(session.id)) {
+				const buffer = this.commandBuffers.get(session.id) || '';
+
+				// Check if Enter key was pressed
+				if (data === '\r' || data === '\n') {
+					if (buffer.trim().length > 0) {
+						// Update session name with first command
+						const firstCommand = buffer.trim().split(' ')[0]; // Just the command, not args
+						session.name = firstCommand;
+						this.firstCommandCaptured.set(session.id, true);
+						this.commandBuffers.delete(session.id);
+						this.renderTabs(); // Re-render tabs with new name
+					}
+				} else if (data === '\x7f' || data === '\b') {
+					// Backspace - remove last character
+					this.commandBuffers.set(session.id, buffer.slice(0, -1));
+				} else if (data.charCodeAt(0) >= 32 || data === '\t') {
+					// Printable character or tab - add to buffer
+					this.commandBuffers.set(session.id, buffer + data);
+				}
+			}
 		});
+
+		// Focus terminal when clicked
+		terminalEl.addEventListener('click', () => {
+			terminal.focus();
+		});
+
+		// Auto-focus on first terminal
+		setTimeout(() => {
+			terminal.focus();
+		}, 100);
 
 		// Handle resize
 		terminal.onResize(({ cols, rows }) => {
@@ -259,6 +321,8 @@ export class TerminalView extends ItemView {
 
 		this.fitAddons.delete(sessionId);
 		this.searchAddons.delete(sessionId);
+		this.firstCommandCaptured.delete(sessionId);
+		this.commandBuffers.delete(sessionId);
 
 		// Remove DOM element
 		const terminalEl = document.getElementById(`terminal-${sessionId}`);
@@ -279,16 +343,15 @@ export class TerminalView extends ItemView {
 			}
 		}
 
-		// Fit active terminal
+		// Fit and focus active terminal
 		const fitAddon = this.fitAddons.get(sessionId);
-		if (fitAddon) {
-			setTimeout(() => fitAddon.fit(), 0);
-		}
-
-		// Focus active terminal
 		const terminal = this.terminals.get(sessionId);
-		if (terminal) {
-			terminal.focus();
+
+		if (fitAddon && terminal) {
+			setTimeout(() => {
+				fitAddon.fit();
+				terminal.focus();
+			}, 50);
 		}
 	}
 
