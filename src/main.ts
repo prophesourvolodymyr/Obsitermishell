@@ -45,7 +45,7 @@ export default class ObsitermishellPlugin extends Plugin {
 		this.terminalManager = new TerminalManager(this.pathResolver);
 
 		// Register terminal view
-		this.registerView(VIEW_TYPE_TERMINAL, (leaf) => new TerminalView(leaf, this.terminalManager));
+		this.registerView(VIEW_TYPE_TERMINAL, (leaf) => new TerminalView(leaf, this.terminalManager, this.settings));
 
 		// Add ribbon icon
 		this.addRibbonIcon('terminal', 'Open Terminal', () => {
@@ -160,8 +160,8 @@ export default class ObsitermishellPlugin extends Plugin {
 			// Terminal view exists, activate it
 			leaf = leaves[0];
 		} else {
-			// Create new terminal view in left sidebar
-			leaf = workspace.getLeftLeaf(false);
+			// Create new terminal view in right sidebar
+			leaf = workspace.getRightLeaf(false);
 			if (leaf) {
 				await leaf.setViewState({
 					type: VIEW_TYPE_TERMINAL,
@@ -265,6 +265,17 @@ export default class ObsitermishellPlugin extends Plugin {
 		// This would need to be implemented in TerminalView
 		// For now, just trigger a theme update which could include font size
 		this.updateTerminalThemes();
+	}
+
+	/**
+	 * Update cursor style/blink/color for all terminals
+	 */
+	public updateTerminalCursorSettings(): void {
+		const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_TERMINAL);
+		for (const leaf of leaves) {
+			const view = leaf.view as TerminalView;
+			view.updateCursorAppearance();
+		}
 	}
 
 	/**

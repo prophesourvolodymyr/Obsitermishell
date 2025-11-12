@@ -94,42 +94,756 @@
   padding: 0;
 }
 
-.obsitermishell-terminal {
+.obsitermishell-terminal-wrapper {
   width: 100%;
   height: 100%;
+  display: none;
+  flex-direction: column;
 }
 
-/* xterm.js overrides */
-.obsitermishell-terminal .xterm {
+.obsitermishell-terminal-wrapper.active {
+  display: flex;
+}
+
+.obsitermishell-terminal-banner {
+  font-family: 'JetBrains Mono', 'Fira Code', Menlo, monospace;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  background-color: var(--background-secondary);
+  color: var(--text-muted);
+  gap: 8px;
+}
+
+.obsitermishell-terminal-banner.is-hidden {
+  display: none;
+}
+
+.obsitermishell-banner-logo {
+  margin: 0 0 8px 0;
+  white-space: pre-line;
+  color: var(--text-normal);
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.obsitermishell-banner-tagline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+  flex-wrap: wrap;
+}
+
+.obsitermishell-banner-tagline::before,
+.obsitermishell-banner-tagline::after {
+  content: '';
+  flex: 1 1 40px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--background-modifier-border));
+}
+
+.obsitermishell-banner-tagline::before {
+  margin-right: 6px;
+}
+
+.obsitermishell-banner-tagline::after {
+  margin-left: 6px;
+  background: linear-gradient(90deg, var(--background-modifier-border), transparent);
+}
+
+.obsitermishell-banner-separator {
+  height: 1px;
+  margin: 8px 0;
+  background: var(--background-modifier-border);
+  opacity: 0.7;
+}
+
+.obsitermishell-banner-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+.obsitermishell-banner-link {
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid rgba(94, 186, 255, 0.45);
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  font-weight: 600;
+  text-decoration: none;
+  color: #7cc8ff;
+  background: rgba(94, 186, 255, 0.15);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.obsitermishell-banner-link:hover {
+  transform: translateY(-1px);
+  background: rgba(94, 186, 255, 0.22);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+.obsitermishell-terminal-host {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+.obsitermishell-terminal-host .xterm {
   height: 100% !important;
   width: 100% !important;
   padding: 4px;
 }
 
-.obsitermishell-terminal .xterm-viewport {
+.obsitermishell-terminal-host .xterm-viewport {
   overflow-y: scroll;
 }
 
-/* Scrollbar styling */
-.obsitermishell-terminal .xterm-viewport::-webkit-scrollbar {
+.obsitermishell-terminal-host .xterm-viewport::-webkit-scrollbar {
   width: 12px;
 }
 
-.obsitermishell-terminal .xterm-viewport::-webkit-scrollbar-track {
+.obsitermishell-terminal-host .xterm-viewport::-webkit-scrollbar-track {
   background: var(--background-secondary);
 }
 
-.obsitermishell-terminal .xterm-viewport::-webkit-scrollbar-thumb {
+.obsitermishell-terminal-host .xterm-viewport::-webkit-scrollbar-thumb {
   background: var(--background-modifier-border);
   border-radius: 6px;
 }
 
-.obsitermishell-terminal .xterm-viewport::-webkit-scrollbar-thumb:hover {
+.obsitermishell-terminal-host .xterm-viewport::-webkit-scrollbar-thumb:hover {
   background: var(--text-muted);
 }
 
-.obsitermishell-terminal .xterm-screen {
+.obsitermishell-terminal-host .xterm-screen {
   height: 100% !important;
+}
+
+/* Cursor overlay animations */
+.obsitermishell-terminal-host {
+  position: relative;
+}
+
+.obsitermishell-cursor-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  transform: translate3d(0, 0, 0);
+  z-index: 5;
+}
+
+.obsitermishell-cursor-overlay.active {
+  opacity: 1;
+}
+
+.obsitermishell-cursor-overlay-inner {
+  width: 100%;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--cursor-accent, #7bf7a4);
+  mix-blend-mode: screen;
+  opacity: 0.9;
+  position: relative;
+}
+
+.obsitermishell-cursor-overlay-inner.cursor-classic {
+  display: none;
+}
+
+.obsitermishell-cursor-overlay-inner.cursor-glow {
+  box-shadow: 0 0 8px var(--cursor-accent), 0 0 16px var(--cursor-accent), 0 0 24px var(--cursor-accent);
+  animation: obs-cursor-glow 1.6s ease-in-out infinite;
+}
+
+.obsitermishell-cursor-overlay-inner.cursor-pulse {
+  animation: obs-cursor-pulse 1.05s ease-in-out infinite;
+}
+
+.obsitermishell-cursor-overlay-inner.cursor-comet {
+  overflow: visible;
+}
+
+.obsitermishell-cursor-overlay-inner.cursor-comet::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 32px;
+  height: 100%;
+  transform: translate(-100%, -50%);
+  background: linear-gradient(90deg, transparent, var(--cursor-accent) 80%);
+  opacity: 0.7;
+  filter: blur(1px);
+  animation: obs-cursor-comet 0.8s ease-in-out infinite;
+}
+
+.obsitermishell-cursor-overlay-inner.cursor-glitch {
+  animation: obs-cursor-glitch 0.15s steps(4) infinite;
+  filter: drop-shadow(2px 0 3px rgba(255, 0, 0, 0.8))
+          drop-shadow(-2px 0 3px rgba(0, 255, 255, 0.8));
+}
+
+.obsitermishell-cursor-overlay-inner.cursor-glitch::before,
+.obsitermishell-cursor-overlay-inner.cursor-glitch::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--cursor-accent);
+  opacity: 0.6;
+}
+
+.obsitermishell-cursor-overlay-inner.cursor-glitch::before {
+  animation: obs-cursor-glitch-layer1 0.3s infinite;
+  mix-blend-mode: screen;
+}
+
+.obsitermishell-cursor-overlay-inner.cursor-glitch::after {
+  animation: obs-cursor-glitch-layer2 0.25s infinite;
+  mix-blend-mode: screen;
+}
+
+.obsitermishell-cursor-overlay-inner.cursor-ripple {
+  animation: obs-cursor-ripple 1.5s ease-out infinite;
+}
+
+.obsitermishell-cursor-overlay-inner.cursor-ripple::before,
+.obsitermishell-cursor-overlay-inner.cursor-ripple::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  border: 2px solid var(--cursor-accent);
+  border-radius: 2px;
+  transform: translate(-50%, -50%);
+  animation: obs-cursor-ripple-wave 1.5s ease-out infinite;
+}
+
+.obsitermishell-cursor-overlay-inner.cursor-ripple::after {
+  animation-delay: 0.5s;
+}
+
+.obsitermishell-cursor-overlay-inner.cursor-ember {
+  animation: obs-cursor-ember 2s ease-in-out infinite;
+  box-shadow: 0 0 8px rgba(255, 100, 0, 0.6), 0 0 16px rgba(255, 140, 0, 0.4);
+  background: linear-gradient(135deg, var(--cursor-accent), #ff8c00, #ffd700);
+}
+
+.obsitermishell-cursor-overlay-inner.cursor-neon {
+  box-shadow: 0 0 10px var(--cursor-accent),
+              0 0 20px var(--cursor-accent),
+              0 0 30px var(--cursor-accent),
+              inset 0 0 10px rgba(255, 255, 255, 0.5);
+  animation: obs-cursor-neon 1.2s ease-in-out infinite;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+}
+
+.obsitermishell-cursor-overlay-inner.cursor-glass {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.05));
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(4px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1),
+              inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  animation: obs-cursor-glass 2s ease-in-out infinite;
+}
+
+.obsitermishell-cursor-overlay-inner.cursor-lightning {
+  animation: obs-cursor-lightning 0.5s linear infinite;
+  box-shadow: 0 0 15px var(--cursor-accent),
+              0 0 30px rgba(255, 255, 255, 0.6);
+}
+
+.obsitermishell-cursor-overlay-inner.cursor-lightning::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: white;
+  opacity: 0;
+  animation: obs-cursor-lightning-flash 0.5s steps(1) infinite;
+}
+
+.obsitermishell-cursor-overlay-inner.cursor-orbit {
+  animation: obs-cursor-orbit-pulse 1.5s ease-in-out infinite;
+}
+
+.obsitermishell-cursor-overlay-inner.cursor-orbit::before,
+.obsitermishell-cursor-overlay-inner.cursor-orbit::after {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--cursor-accent);
+  box-shadow: 0 0 6px var(--cursor-accent);
+  top: 50%;
+  left: 50%;
+}
+
+.obsitermishell-cursor-overlay-inner.cursor-orbit::before {
+  animation: obs-cursor-orbit 1.5s linear infinite;
+}
+
+.obsitermishell-cursor-overlay-inner.cursor-orbit::after {
+  animation: obs-cursor-orbit 1.5s linear infinite reverse;
+}
+
+.obsitermishell-cursor-overlay-inner.cursor-rainbow {
+  background: linear-gradient(45deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3);
+  background-size: 400% 400%;
+  animation: obs-cursor-rainbow 3s ease infinite;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+.obsitermishell-cursor-overlay-inner.cursor-wave {
+  animation: obs-cursor-wave 1s ease-in-out infinite;
+  filter: blur(0.5px);
+}
+
+.obsitermishell-cursor-overlay-inner.cursor-wave::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--cursor-accent);
+  opacity: 0.4;
+  animation: obs-cursor-wave-layer 1s ease-in-out infinite;
+}
+
+.obsitermishell-cursor-overlay-inner.cursor-heartbeat {
+  animation: obs-cursor-heartbeat 1.4s ease-in-out infinite;
+  box-shadow: 0 0 8px rgba(255, 100, 120, 0.6);
+}
+
+.obsitermishell-cursor-overlay-inner.cursor-beam {
+  overflow: visible;
+}
+
+.obsitermishell-cursor-overlay-inner.cursor-beam::before,
+.obsitermishell-cursor-overlay-inner.cursor-beam::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  height: 100%;
+  width: 40px;
+  background: linear-gradient(90deg, transparent, var(--cursor-accent) 50%, transparent);
+  opacity: 0.6;
+  filter: blur(1px);
+}
+
+.obsitermishell-cursor-overlay-inner.cursor-beam::before {
+  left: 100%;
+  animation: obs-cursor-beam-scan 1.5s ease-in-out infinite;
+}
+
+.obsitermishell-cursor-overlay-inner.cursor-beam::after {
+  right: 100%;
+  animation: obs-cursor-beam-scan 1.5s ease-in-out infinite reverse;
+}
+
+.obsitermishell-cursor-overlay-inner.cursor-vortex {
+  animation: obs-cursor-vortex-spin 2s linear infinite;
+  overflow: visible;
+}
+
+.obsitermishell-cursor-overlay-inner.cursor-vortex::before,
+.obsitermishell-cursor-overlay-inner.cursor-vortex::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 150%;
+  height: 150%;
+  border: 2px solid var(--cursor-accent);
+  border-radius: 50%;
+  opacity: 0;
+  animation: obs-cursor-vortex-ripple 2s ease-out infinite;
+}
+
+.obsitermishell-cursor-overlay-inner.cursor-vortex::after {
+  animation-delay: 1s;
+}
+
+@keyframes obs-cursor-glow {
+  0%, 100% {
+    opacity: 0.6;
+    box-shadow: 0 0 8px var(--cursor-accent), 0 0 16px var(--cursor-accent);
+  }
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 16px var(--cursor-accent), 0 0 32px var(--cursor-accent), 0 0 48px var(--cursor-accent);
+  }
+}
+
+@keyframes obs-cursor-pulse {
+  0%, 100% {
+    transform: scale(0.85);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+}
+
+@keyframes obs-cursor-comet {
+  0%, 100% {
+    opacity: 0.4;
+    transform: translate(-100%, -50%) scaleX(0.6);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(-100%, -50%) scaleX(1);
+  }
+}
+
+@keyframes obs-cursor-glitch {
+  0%, 100% {
+    clip-path: inset(0 0 0 0);
+    transform: translate(0, 0);
+  }
+  20% {
+    clip-path: inset(30% 0 50% 0);
+    transform: translate(-2px, 2px);
+  }
+  40% {
+    clip-path: inset(50% 0 30% 0);
+    transform: translate(2px, -2px);
+  }
+  60% {
+    clip-path: inset(0 30% 0 50%);
+    transform: translate(-3px, -1px);
+  }
+  80% {
+    clip-path: inset(0 50% 0 30%);
+    transform: translate(3px, 1px);
+  }
+}
+
+@keyframes obs-cursor-glitch-layer1 {
+  0%, 100% {
+    transform: translate(0, 0);
+    opacity: 0;
+  }
+  33% {
+    transform: translate(-3px, 0);
+    opacity: 0.7;
+  }
+  66% {
+    transform: translate(3px, 0);
+    opacity: 0.7;
+  }
+}
+
+@keyframes obs-cursor-glitch-layer2 {
+  0%, 100% {
+    transform: translate(0, 0);
+    opacity: 0;
+  }
+  25% {
+    transform: translate(0, -2px);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translate(0, 2px);
+    opacity: 0.5;
+  }
+  75% {
+    transform: translate(2px, -2px);
+    opacity: 0.5;
+  }
+}
+
+@keyframes obs-cursor-ripple {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+@keyframes obs-cursor-ripple-wave {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(3);
+    opacity: 0;
+  }
+}
+
+@keyframes obs-cursor-ember {
+  0%, 100% {
+    filter: drop-shadow(0 0 6px rgba(255, 102, 0, 0.8))
+            drop-shadow(0 0 12px rgba(255, 140, 0, 0.4));
+    transform: scale(1);
+  }
+  50% {
+    filter: drop-shadow(0 0 12px rgba(255, 215, 0, 1))
+            drop-shadow(0 0 24px rgba(255, 140, 0, 0.6));
+    transform: scale(1.05);
+  }
+}
+
+@keyframes obs-cursor-neon {
+  0%, 100% {
+    transform: skewX(0deg);
+    opacity: 0.9;
+    box-shadow: 0 0 10px var(--cursor-accent),
+                0 0 20px var(--cursor-accent),
+                0 0 30px var(--cursor-accent);
+  }
+  25% {
+    transform: skewX(-3deg);
+    opacity: 1;
+  }
+  50% {
+    transform: skewX(3deg);
+    opacity: 0.85;
+    box-shadow: 0 0 15px var(--cursor-accent),
+                0 0 30px var(--cursor-accent),
+                0 0 45px var(--cursor-accent);
+  }
+  75% {
+    transform: skewX(-2deg);
+    opacity: 1;
+  }
+}
+
+@keyframes obs-cursor-glass {
+  0%, 100% {
+    opacity: 0.7;
+    transform: scale(1);
+    backdrop-filter: blur(4px);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scale(1.05);
+    backdrop-filter: blur(6px);
+  }
+}
+
+@keyframes obs-cursor-lightning {
+  0%, 100% {
+    filter: drop-shadow(0 0 10px var(--cursor-accent))
+            drop-shadow(0 0 20px rgba(255, 255, 255, 0.5));
+    opacity: 1;
+  }
+  10% {
+    filter: drop-shadow(0 0 25px var(--cursor-accent))
+            drop-shadow(0 0 40px rgba(255, 255, 255, 0.9));
+    opacity: 0.4;
+  }
+  20% {
+    filter: drop-shadow(0 0 15px var(--cursor-accent))
+            drop-shadow(0 0 30px rgba(255, 255, 255, 0.7));
+    opacity: 1;
+  }
+}
+
+@keyframes obs-cursor-lightning-flash {
+  0%, 90%, 100% {
+    opacity: 0;
+  }
+  10%, 12% {
+    opacity: 0.6;
+  }
+}
+
+@keyframes obs-cursor-orbit {
+  0% {
+    transform: translate(-50%, -50%) rotate(0deg) translate(16px) rotate(0deg);
+  }
+  100% {
+    transform: translate(-50%, -50%) rotate(360deg) translate(16px) rotate(-360deg);
+  }
+}
+
+@keyframes obs-cursor-orbit-pulse {
+  0%, 100% {
+    transform: scale(0.95);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+}
+
+@keyframes obs-cursor-rainbow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes obs-cursor-wave {
+  0%, 100% {
+    transform: scaleY(1) skewX(0deg);
+  }
+  25% {
+    transform: scaleY(1.15) skewX(5deg);
+  }
+  50% {
+    transform: scaleY(0.85) skewX(0deg);
+  }
+  75% {
+    transform: scaleY(1.15) skewX(-5deg);
+  }
+}
+
+@keyframes obs-cursor-wave-layer {
+  0%, 100% {
+    transform: translateX(0) scaleX(1);
+    opacity: 0.3;
+  }
+  50% {
+    transform: translateX(2px) scaleX(1.2);
+    opacity: 0.6;
+  }
+}
+
+@keyframes obs-cursor-heartbeat {
+  0%, 100% {
+    transform: scale(1);
+  }
+  10% {
+    transform: scale(1.15);
+  }
+  20% {
+    transform: scale(1);
+  }
+  30% {
+    transform: scale(1.25);
+  }
+  40% {
+    transform: scale(1);
+  }
+}
+
+@keyframes obs-cursor-beam-scan {
+  0%, 100% {
+    transform: translateX(0);
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateX(100px);
+    opacity: 0;
+  }
+}
+
+@keyframes obs-cursor-vortex-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes obs-cursor-vortex-ripple {
+  0% {
+    transform: translate(-50%, -50%) scale(0.5) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(2) rotate(180deg);
+    opacity: 0;
+  }
+}
+
+.obsitermishell-guide-overlay {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 12px 0 0;
+  padding: 12px 16px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  background-color: var(--background-secondary);
+}
+
+.obsitermishell-guide-title {
+  flex-basis: 100%;
+  margin: 0;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.obsitermishell-guide-cards {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.obsitermishell-guide-card {
+  flex: 1 1 160px;
+  min-width: 140px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(94, 186, 255, 0.35);
+  background: rgba(94, 186, 255, 0.08);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.obsitermishell-guide-card strong {
+  display: block;
+  font-size: 12px;
+  color: var(--text-normal);
+  margin-bottom: 4px;
+}
+
+.obsitermishell-guide-card p {
+  margin: 0;
+  line-height: 1.4;
+}
+
+.obsitermishell-guide-dismiss {
+  margin-left: auto;
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid rgba(94, 186, 255, 0.4);
+  background: transparent;
+  color: #7cc8ff;
+  cursor: pointer;
+}
+
+.obsitermishell-guide-dismiss:hover {
+  background: rgba(94, 186, 255, 0.15);
 }
 
 /* Mobile notice */

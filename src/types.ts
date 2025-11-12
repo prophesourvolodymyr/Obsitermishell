@@ -20,6 +20,27 @@ export interface TerminalProfile {
 }
 
 /**
+ * Cursor animation styles for the overlay cursor
+ */
+export type CursorAnimationStyle =
+	| 'classic'
+	| 'glow'
+	| 'pulse'
+	| 'comet'
+	| 'glitch'
+	| 'ripple'
+	| 'ember'
+	| 'neon'
+	| 'glass'
+	| 'lightning'
+	| 'orbit'
+	| 'rainbow'
+	| 'wave'
+	| 'heartbeat'
+	| 'beam'
+	| 'vortex';
+
+/**
  * Plugin settings
  */
 export interface ObsitermishellSettings {
@@ -27,10 +48,20 @@ export interface ObsitermishellSettings {
 	defaultCwdMode: CwdMode;
 	scrollback: number;
 	fontSize: number;
+	cursorStyle: 'block' | 'underline' | 'bar';
+	cursorBlink: boolean;
+	cursorAccent: string;
+	terminalForeground: string;
+	cursorAnimation: CursorAnimationStyle;
+	donationLink: string;
+	workWithMeLink: string;
+	repositoryLink: string;
+	websiteLink: string;
 	profiles: TerminalProfile[];
 	restoreSessions: boolean;
 	enableSearch: boolean;
 	enableWebLinks: boolean;
+	showWelcomeBanner: boolean;
 }
 
 /**
@@ -41,6 +72,15 @@ export const DEFAULT_SETTINGS: ObsitermishellSettings = {
 	defaultCwdMode: 'vault',
 	scrollback: 10000,
 	fontSize: 14,
+	cursorStyle: 'block',
+	cursorBlink: true,
+	cursorAccent: '#7bf7a4',
+	terminalForeground: '',
+	cursorAnimation: 'classic',
+	donationLink: 'https://github.com/sponsors/prophesourvolodymyr',
+	workWithMeLink: 'https://github.com/prophesourvolodymyr/Obsitermishell#work-with-me',
+	repositoryLink: 'https://github.com/prophesourvolodymyr/Obsitermishell',
+	websiteLink: 'https://github.com/prophesourvolodymyr/Obsitermishell#readme',
 	profiles: [
 		{
 			id: 'default',
@@ -52,6 +92,7 @@ export const DEFAULT_SETTINGS: ObsitermishellSettings = {
 	restoreSessions: false,
 	enableSearch: true,
 	enableWebLinks: true,
+	showWelcomeBanner: true,
 };
 
 /**

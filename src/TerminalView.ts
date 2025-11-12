@@ -5,19 +5,28 @@
 
 import { ItemView, WorkspaceLeaf } from 'obsidian';
 import { Terminal } from '@xterm/xterm';
-import '@xterm/xterm/css/xterm.css';
 import { FitAddon } from '@xterm/addon-fit';
 import { SearchAddon } from '@xterm/addon-search';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { TerminalManager } from './TerminalManager';
-import { TerminalSession } from './types';
+import { TerminalSession, ObsitermishellSettings, TerminalTheme, CursorAnimationStyle } from './types';
 import { ThemeManager } from './utils/theme-manager';
 import { PlatformDetector } from './utils/platform-detector';
+import { ensureXtermStylesInjected } from './utils/style-injector';
 
 export const VIEW_TYPE_TERMINAL = 'obsitermishell-terminal';
 
+type Disposable = { dispose: () => void };
+
+interface CursorOverlayState {
+	wrapper: HTMLElement;
+	inner: HTMLElement;
+	disposables: Disposable[];
+}
+
 export class TerminalView extends ItemView {
 	private terminalManager: TerminalManager;
+	private settings: ObsitermishellSettings;
 	private terminals: Map<string, Terminal> = new Map();
 	private fitAddons: Map<string, FitAddon> = new Map();
 	private searchAddons: Map<string, SearchAddon> = new Map();
@@ -25,14 +34,19 @@ export class TerminalView extends ItemView {
 	private tabsEl: HTMLElement | null = null;
 	private actionsEl: HTMLElement | null = null;
 	private terminalContainerEl: HTMLElement | null = null;
-	private activeTerminalEl: HTMLElement | null = null;
 	private resizeObserver: ResizeObserver | null = null;
+	private bannerEls: Map<string, HTMLElement> = new Map();
+	private guideOverlayEl: HTMLElement | null = null;
+	private guideDismissed = false;
+	private cursorOverlays: Map<string, CursorOverlayState> = new Map();
 	private firstCommandCaptured: Map<string, boolean> = new Map();
 	private commandBuffers: Map<string, string> = new Map();
 
-	constructor(leaf: WorkspaceLeaf, terminalManager: TerminalManager) {
+	constructor(leaf: WorkspaceLeaf, terminalManager: TerminalManager, settings: ObsitermishellSettings) {
 		super(leaf);
 		this.terminalManager = terminalManager;
+		this.settings = settings;
+		ensureXtermStylesInjected();
 
 		// Listen to terminal manager events
 		this.terminalManager.on('session-created', this.onSessionCreated.bind(this));
@@ -93,6 +107,8 @@ export class TerminalView extends ItemView {
 		// Add action buttons
 		this.createActionButton('New', 'plus', () => this.createNewTerminal());
 		this.createActionButton('Clear', 'eraser', () => this.clearActiveTerminal());
+
+		this.renderGuideOverlay();
 
 		// Create terminal container
 		this.terminalContainerEl = containerEl.createDiv({ cls: 'obsitermishell-terminal-container' });
@@ -228,18 +244,26 @@ export class TerminalView extends ItemView {
 	 * Render a terminal for a session
 	 */
 	private renderTerminal(session: TerminalSession): void {
-		// Create terminal element
-		const terminalEl = this.terminalContainerEl!.createDiv({ cls: 'obsitermishell-terminal' });
-		terminalEl.id = `terminal-${session.id}`;
-		terminalEl.style.display = 'none'; // Hidden by default
+		// Create terminal wrapper with banner
+		const wrapperEl = this.terminalContainerEl!.createDiv({ cls: 'obsitermishell-terminal-wrapper' });
+		wrapperEl.id = `terminal-${session.id}`;
+		wrapperEl.style.display = 'none'; // Hidden by default
+
+		const bannerEl = wrapperEl.createDiv({ cls: 'obsitermishell-terminal-banner' });
+		this.bannerEls.set(session.id, bannerEl);
+
+		const terminalEl = wrapperEl.createDiv({ cls: 'obsitermishell-terminal-host' });
 
 		// Create xterm.js Terminal for REAL PTY
+		const fontSize = Math.max(10, this.settings.fontSize || 14);
+		const scrollback = Math.max(1000, this.settings.scrollback || 10000);
+
 		const terminal = new Terminal({
 			cursorBlink: true,
-			fontSize: 14,
+			fontSize,
 			fontFamily: 'Menlo, Monaco, "Courier New", monospace',
 			theme: ThemeManager.getObsidianTheme(),
-			scrollback: 10000,
+			scrollback,
 			// No special EOL conversion - PTY handles it properly
 		});
 
@@ -255,9 +279,15 @@ export class TerminalView extends ItemView {
 
 		// Open terminal in DOM
 		terminal.open(terminalEl);
+		this.applyCursorOptions(terminal, session.id);
 
 		// Fit to container
 		fitAddon.fit();
+
+		this.renderBanner(session.id);
+		requestAnimationFrame(() => {
+			this.initializeCursorOverlay(session.id, terminal, terminalEl);
+		});
 
 		// Handle terminal input -> REAL PTY
 		// NO ECHOING - real PTY handles this automatically
@@ -319,6 +349,8 @@ export class TerminalView extends ItemView {
 			this.terminals.delete(sessionId);
 		}
 
+		this.disposeCursorOverlay(sessionId);
+		this.bannerEls.delete(sessionId);
 		this.fitAddons.delete(sessionId);
 		this.searchAddons.delete(sessionId);
 		this.firstCommandCaptured.delete(sessionId);
@@ -351,9 +383,12 @@ export class TerminalView extends ItemView {
 			setTimeout(() => {
 				fitAddon.fit();
 				terminal.focus();
+				this.renderBanner(sessionId);
+				this.updateCursorOverlayStyle(sessionId);
+				this.updateCursorOverlay(sessionId);
 			}, 50);
 		}
-	}
+ 	}
 
 	/**
 	 * Render tabs
@@ -401,19 +436,261 @@ export class TerminalView extends ItemView {
 			for (const fitAddon of this.fitAddons.values()) {
 				fitAddon.fit();
 			}
+
+			const activeSession = this.terminalManager.getActiveSession();
+			if (activeSession) {
+				this.renderBanner(activeSession.id);
+			}
 		});
 
 		this.resizeObserver.observe(this.terminalContainerEl);
 	}
 
+	private renderGuideOverlay(): void {
+		if (this.guideDismissed || this.guideOverlayEl) return;
+
+		this.guideOverlayEl = this.containerEl.createDiv({ cls: 'obsitermishell-guide-overlay' });
+		this.guideOverlayEl.createEl('p', {
+			cls: 'obsitermishell-guide-title',
+			text: 'Quick tour of the terminal header',
+		});
+
+		const cardsWrap = this.guideOverlayEl.createDiv({ cls: 'obsitermishell-guide-cards' });
+		const cards = [
+			{
+				title: 'Tabs',
+				body: 'Switch between sessions or close them with the ✕ button.',
+			},
+			{
+				title: '"New"',
+				body: 'Open another terminal pane instantly.',
+			},
+			{
+				title: '"Clear"',
+				body: 'Wipe the output buffer and send a clear command to the shell.',
+			},
+		];
+
+		for (const card of cards) {
+			const cardEl = cardsWrap.createDiv({ cls: 'obsitermishell-guide-card' });
+			cardEl.createEl('strong', { text: card.title });
+			cardEl.createEl('p', { text: card.body });
+		}
+
+		const dismissBtn = this.guideOverlayEl.createEl('button', {
+			text: 'Got it',
+		});
+		dismissBtn.addClass('obsitermishell-guide-dismiss');
+		dismissBtn.addEventListener('click', () => {
+			this.guideDismissed = true;
+			this.guideOverlayEl?.remove();
+			this.guideOverlayEl = null;
+		});
+	}
+
+	private renderBanner(sessionId: string): void {
+		const bannerEl = this.bannerEls.get(sessionId);
+		if (!bannerEl) return;
+
+		bannerEl.empty();
+
+		if (!this.settings.showWelcomeBanner) {
+			bannerEl.addClass('is-hidden');
+			return;
+		}
+
+		bannerEl.removeClass('is-hidden');
+
+		const width = bannerEl.clientWidth || this.terminalContainerEl?.clientWidth || 600;
+		const logo = this.getBannerLogo(width);
+
+		bannerEl.createEl('pre', {
+			cls: 'obsitermishell-banner-logo',
+			text: logo,
+		});
+
+		const tagline = 'Real PTY for Obsidian · Desktop only · Press Cmd+P (mac) / Ctrl+Shift+P (win/linux)';
+		bannerEl.createDiv({
+			cls: 'obsitermishell-banner-tagline',
+			text: tagline,
+		});
+
+		this.addBannerSeparator(bannerEl);
+
+		const links = this.getBannerLinks();
+		if (links.length > 0) {
+			const linksEl = bannerEl.createDiv({ cls: 'obsitermishell-banner-links' });
+			for (const link of links) {
+				const anchor = linksEl.createEl('a', {
+					cls: 'obsitermishell-banner-link',
+					text: `[${link.label}]`,
+				});
+				anchor.href = link.url;
+				anchor.target = '_blank';
+				anchor.rel = 'noopener noreferrer';
+			}
+
+			this.addBannerSeparator(bannerEl);
+		}
+	}
+
+	private addBannerSeparator(container: HTMLElement): void {
+		container.createDiv({ cls: 'obsitermishell-banner-separator' });
+	}
+
+	private getBannerLinks(): { label: string; url: string }[] {
+		return [
+			{ label: 'Donate', url: this.settings.donationLink },
+			{ label: 'Work With Me', url: this.settings.workWithMeLink },
+			{ label: 'Repo', url: this.settings.repositoryLink },
+			{ label: 'Website', url: this.settings.websiteLink },
+		].filter((link) => link.url && link.url.trim().length > 0);
+	}
+
+	private getBannerLogo(width: number): string {
+		const fullLogo = [
+			'   ____  ___________',
+			'  / __ \\/_  __/ ___/',
+			' / / / / / /  \\__ \\',
+			'/ /_/ / / /  ___/ /',
+			'\\____/ /_/  /____/',
+		].join('\n');
+
+		if (width >= 520) {
+			return fullLogo;
+		}
+
+		const compactLogo = ['  ___', ' / _ \\', '| | | |', '| |_| |', ' \\___/'].join('\n');
+		return compactLogo;
+	}
+
+	private initializeCursorOverlay(sessionId: string, terminal: Terminal, hostEl: HTMLElement): void {
+		if (this.cursorOverlays.has(sessionId)) return;
+		const screen = hostEl.querySelector('.xterm-screen') as HTMLElement | null;
+		if (!screen) return;
+
+		const wrapper = document.createElement('div');
+		wrapper.className = 'obsitermishell-cursor-overlay';
+		const inner = document.createElement('div');
+		inner.className = 'obsitermishell-cursor-overlay-inner';
+		wrapper.appendChild(inner);
+		screen.appendChild(wrapper);
+
+		const update = () => {
+			this.updateCursorOverlay(sessionId);
+		};
+
+		const disposables: Disposable[] = [
+			terminal.onRender(update),
+			terminal.onCursorMove(update),
+			terminal.onScroll(update),
+			terminal.onResize(() => this.updateCursorOverlay(sessionId)),
+		];
+
+		this.cursorOverlays.set(sessionId, { wrapper, inner, disposables });
+		this.updateCursorOverlayStyle(sessionId);
+		this.updateCursorOverlay(sessionId);
+	}
+
+	private disposeCursorOverlay(sessionId: string): void {
+		const overlay = this.cursorOverlays.get(sessionId);
+		if (!overlay) return;
+		for (const disposable of overlay.disposables) {
+			disposable.dispose();
+		}
+		overlay.wrapper.remove();
+		this.cursorOverlays.delete(sessionId);
+	}
+
+	private updateCursorOverlayStyle(sessionId: string): void {
+		const overlay = this.cursorOverlays.get(sessionId);
+		if (!overlay) return;
+		const animation = this.getCursorAnimation();
+		const accent = this.getCursorAccentColor();
+		overlay.wrapper.classList.toggle('active', animation !== 'classic');
+		overlay.inner.className = `obsitermishell-cursor-overlay-inner cursor-${animation}`;
+		overlay.inner.style.setProperty('--cursor-accent', accent);
+	}
+
+	private updateCursorOverlay(sessionId: string): void {
+		const overlay = this.cursorOverlays.get(sessionId);
+		if (!overlay) return;
+		const animation = this.getCursorAnimation();
+		if (animation === 'classic') {
+			overlay.wrapper.style.opacity = '0';
+			return;
+		}
+
+		const terminal = this.terminals.get(sessionId);
+		const core = (terminal as any)?._core;
+		const renderer = core?._renderService;
+		const dims = renderer?.dimensions?.css?.cell;
+		if (!terminal || !core || !dims) return;
+
+		const cursorX = core.buffer.x;
+		const viewportY = core.buffer.y - core.buffer.ydisp;
+		const x = cursorX * dims.width;
+		const y = viewportY * dims.height;
+		overlay.wrapper.style.transform = `translate(${x}px, ${y}px)`;
+		overlay.wrapper.style.width = `${dims.width}px`;
+		overlay.wrapper.style.height = `${dims.height}px`;
+		overlay.wrapper.style.opacity = '1';
+	}
+
+	private getCursorAccentColor(): string {
+		const custom = this.settings.cursorAccent?.trim();
+		if (custom) return custom;
+		const theme = ThemeManager.getObsidianTheme();
+		return theme.cursor || '#7bf7a4';
+	}
+
+	private getCursorAnimation(): CursorAnimationStyle {
+		return this.settings.cursorAnimation || 'classic';
+	}
+
+	private buildTheme(): TerminalTheme {
+		const baseTheme = ThemeManager.getObsidianTheme();
+		const theme: TerminalTheme = { ...baseTheme };
+		if (this.settings.cursorAccent && this.settings.cursorAccent.trim().length > 0) {
+			theme.cursor = this.settings.cursorAccent;
+		}
+		if (this.settings.terminalForeground && this.settings.terminalForeground.trim().length > 0) {
+			theme.foreground = this.settings.terminalForeground;
+		}
+		return theme;
+	}
+
+	private applyCursorOptions(terminal: Terminal, sessionId: string): void {
+		const animation = this.getCursorAnimation();
+		const theme = this.buildTheme();
+		if (animation !== 'classic') {
+			theme.cursor = '#00000000';
+			terminal.options.cursorBlink = false;
+			terminal.options.cursorStyle = 'block';
+		} else {
+			terminal.options.cursorBlink = typeof this.settings.cursorBlink === 'boolean' ? this.settings.cursorBlink : true;
+			terminal.options.cursorStyle = this.settings.cursorStyle || 'block';
+		}
+		terminal.options.theme = theme;
+		this.updateCursorOverlayStyle(sessionId);
+		this.updateCursorOverlay(sessionId);
+	}
+
+	public updateCursorAppearance(): void {
+		for (const [sessionId, terminal] of this.terminals.entries()) {
+			this.applyCursorOptions(terminal, sessionId);
+		}
+	}
+
+
+	/**
+	 * Show welcome banner with ASCII art
+	 */
 	/**
 	 * Update theme for all terminals
 	 */
 	public updateTheme(): void {
-		const theme = ThemeManager.getObsidianTheme();
-		for (const terminal of this.terminals.values()) {
-			terminal.options.theme = theme;
-		}
+		this.updateCursorAppearance();
 	}
 
 	async onClose(): Promise<void> {
@@ -430,6 +707,11 @@ export class TerminalView extends ItemView {
 		this.terminals.clear();
 		this.fitAddons.clear();
 		this.searchAddons.clear();
+		for (const [sessionId] of this.cursorOverlays) {
+			this.disposeCursorOverlay(sessionId);
+		}
+		this.cursorOverlays.clear();
+		this.bannerEls.clear();
 
 		// Kill all PTY sessions
 		this.terminalManager.killAll();

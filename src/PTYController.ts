@@ -48,8 +48,8 @@ export class PTYController extends EventEmitter {
 	 * Spawn a new PTY process via the daemon
 	 */
 	public async spawn(options: PTYOptions = {}): Promise<void> {
-		// Connect to daemon
-		await this.connectToDaemon();
+		// Connect to daemon with retries
+		await this.ensureDaemonConnection();
 
 		// Detect shell if not provided
 		let shell = options.shell;
@@ -106,6 +106,36 @@ export class PTYController extends EventEmitter {
 				rows,
 			});
 		});
+	}
+
+	/**
+	 * Ensure we have a daemon connection, retrying if necessary
+	 */
+	private async ensureDaemonConnection(): Promise<void> {
+		if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+			return;
+		}
+
+		const maxAttempts = 5;
+		const baseDelay = 300;
+		let lastError: unknown;
+
+		for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+			try {
+				await this.connectToDaemon();
+				return;
+			} catch (error) {
+				lastError = error;
+				console.warn(`[PTYController] Failed to connect (attempt ${attempt}/${maxAttempts})`, error);
+				await new Promise((resolve) => setTimeout(resolve, baseDelay * attempt));
+			}
+		}
+
+		if (lastError instanceof Error) {
+			throw lastError;
+		}
+
+		throw new Error('Failed to connect to PTY daemon');
 	}
 
 	/**
