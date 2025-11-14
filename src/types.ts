@@ -52,7 +52,9 @@ export interface ObsitermishellSettings {
 	cursorBlink: boolean;
 	cursorAccent: string;
 	terminalForeground: string;
+	terminalBackground: string;
 	cursorAnimation: CursorAnimationStyle;
+	activeThemePreset: string; // ID of active theme preset, or 'custom' for manual settings
 	donationLink: string;
 	workWithMeLink: string;
 	repositoryLink: string;
@@ -62,6 +64,9 @@ export interface ObsitermishellSettings {
 	enableSearch: boolean;
 	enableWebLinks: boolean;
 	showWelcomeBanner: boolean;
+	showCoffeeBanner: boolean;
+	backgroundImage: string;
+	backgroundOpacity: number;
 }
 
 /**
@@ -76,7 +81,9 @@ export const DEFAULT_SETTINGS: ObsitermishellSettings = {
 	cursorBlink: true,
 	cursorAccent: '#7bf7a4',
 	terminalForeground: '',
+	terminalBackground: '',
 	cursorAnimation: 'classic',
+	activeThemePreset: 'obsidian', // Default to Obsidian theme
 	donationLink: 'https://github.com/sponsors/prophesourvolodymyr',
 	workWithMeLink: 'https://github.com/prophesourvolodymyr/Obsitermishell#work-with-me',
 	repositoryLink: 'https://github.com/prophesourvolodymyr/Obsitermishell',
@@ -93,6 +100,9 @@ export const DEFAULT_SETTINGS: ObsitermishellSettings = {
 	enableSearch: true,
 	enableWebLinks: true,
 	showWelcomeBanner: true,
+	showCoffeeBanner: false,
+	backgroundImage: '',
+	backgroundOpacity: 0.3,
 };
 
 /**
@@ -153,4 +163,63 @@ export interface TerminalTheme {
 	brightMagenta: string;
 	brightCyan: string;
 	brightWhite: string;
+}
+
+/**
+ * UI color scheme for theming the entire plugin interface
+ */
+export interface UIColorScheme {
+	// Header & Container
+	headerBackground: string;
+	headerBorder: string;
+	containerBackground: string;
+
+	// Tabs
+	tabBackground: string;
+	tabBackgroundHover: string;
+	tabBackgroundActive: string;
+	tabText: string;
+	tabTextActive: string;
+	tabBorder: string;
+	tabBorderActive: string;
+
+	// Buttons
+	buttonBackground: string;
+	buttonBackgroundHover: string;
+	buttonText: string;
+	buttonBorder: string;
+
+	// Banner
+	bannerBackground: string;
+	bannerBorder: string;
+	bannerText: string;
+	bannerTextMuted: string;
+
+	// Banner Links
+	linkBackground: string;
+	linkBackgroundHover: string;
+	linkText: string;
+	linkBorder: string;
+
+	// Guide Cards
+	guideCardBackground: string;
+	guideCardBorder: string;
+	guideCardText: string;
+	guideCardTextMuted: string;
+
+	// Accent color for highlights
+	accentColor: string;
+}
+
+/**
+ * Theme preset combining cursor animation, terminal colors, and UI colors
+ */
+export interface ThemePreset {
+	id: string;
+	name: string;
+	description: string;
+	cursorAnimation: CursorAnimationStyle;
+	cursorAccent: string;
+	theme: TerminalTheme;
+	uiColors: UIColorScheme;
 }

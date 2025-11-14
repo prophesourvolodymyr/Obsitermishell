@@ -15,8 +15,8 @@
   display: flex;
   align-items: center;
   padding: 8px;
-  border-bottom: 1px solid var(--obs-header-border, var(--background-modifier-border));
-  background-color: var(--obs-header-bg, var(--background-secondary));
+  border-bottom: 1px solid var(--background-modifier-border);
+  background-color: var(--background-secondary);
   gap: 8px;
 }
 
@@ -34,9 +34,8 @@
   gap: 6px;
   padding: 4px 12px;
   border-radius: 4px;
-  background-color: var(--obs-tab-bg, var(--background-primary));
-  border: 1px solid var(--obs-tab-border, var(--background-modifier-border));
-  color: var(--obs-tab-text, var(--text-normal));
+  background-color: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
   cursor: pointer;
   white-space: nowrap;
   font-size: 12px;
@@ -44,13 +43,13 @@
 }
 
 .obsitermishell-tab:hover {
-  background-color: var(--obs-tab-bg-hover, var(--background-modifier-hover));
+  background-color: var(--background-modifier-hover);
 }
 
 .obsitermishell-tab.active {
-  background-color: var(--obs-tab-bg-active, var(--interactive-accent));
-  color: var(--obs-tab-text-active, var(--text-on-accent));
-  border-color: var(--obs-tab-border-active, var(--interactive-accent));
+  background-color: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border-color: var(--interactive-accent);
 }
 
 .obsitermishell-tab-close {
@@ -65,7 +64,7 @@
 
 .obsitermishell-tab-close:hover {
   opacity: 1;
-  background-color: var(--obs-button-bg-hover, var(--background-modifier-hover));
+  background-color: rgba(0, 0, 0, 0.1);
 }
 
 /* Terminal actions */
@@ -78,24 +77,13 @@
   padding: 4px 8px;
   border-radius: 4px;
   cursor: pointer;
-  border: 1px solid var(--obs-button-border, var(--background-modifier-border));
-  background-color: var(--obs-button-bg, var(--background-primary));
-  color: var(--obs-button-text, var(--text-normal));
+  border: 1px solid var(--background-modifier-border);
+  background-color: var(--background-primary);
   transition: background-color 0.15s;
 }
 
 .obsitermishell-action-button:hover {
-  background-color: var(--obs-button-bg-hover, var(--background-modifier-hover));
-}
-
-.obsitermishell-profile-select {
-  padding: 4px 8px;
-  border-radius: 4px;
-  border: 1px solid var(--obs-button-border, var(--background-modifier-border));
-  background-color: var(--obs-button-bg, var(--background-primary));
-  color: var(--obs-button-text, var(--text-normal));
-  font-size: 12px;
-  cursor: pointer;
+  background-color: var(--background-modifier-hover);
 }
 
 /* Terminal container */
@@ -104,44 +92,6 @@
   position: relative;
   overflow: hidden;
   padding: 0;
-  --bg-image: none;
-  --bg-opacity: 0.25;
-}
-
-/* Background image with opacity control using pseudo-element */
-.obsitermishell-terminal-container.has-custom-background::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-image: var(--bg-image);
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  opacity: var(--bg-opacity, 0.3);
-  pointer-events: none;
-  z-index: 0;
-}
-
-.obsitermishell-terminal-container.has-custom-background {
-  background-color: transparent;
-}
-
-.obsitermishell-terminal-container.has-custom-background .obsitermishell-terminal-host,
-.obsitermishell-terminal-container.has-custom-background .obsitermishell-terminal-host .xterm,
-.obsitermishell-terminal-container.has-custom-background .obsitermishell-terminal-host .xterm-screen,
-.obsitermishell-terminal-container.has-custom-background .obsitermishell-terminal-host .xterm-viewport,
-.obsitermishell-terminal-container.has-custom-background .obsitermishell-terminal-host .xterm-rows,
-.obsitermishell-terminal-container.has-custom-background .obsitermishell-terminal-host .xterm-helpers,
-.obsitermishell-terminal-container.has-custom-background .obsitermishell-terminal-host .xterm-cursor-layer {
-  background-color: transparent !important;
-  background: transparent !important;
-}
-
-.obsitermishell-terminal-container.has-custom-background .obsitermishell-terminal-host .xterm-viewport {
-  backdrop-filter: blur(var(--obs-terminal-bg-blur, 0px));
 }
 
 .obsitermishell-terminal-wrapper {
@@ -149,8 +99,6 @@
   height: 100%;
   display: none;
   flex-direction: column;
-  position: relative;
-  z-index: 1;
 }
 
 .obsitermishell-terminal-wrapper.active {
@@ -160,15 +108,10 @@
 .obsitermishell-terminal-banner {
   font-family: 'JetBrains Mono', 'Fira Code', Menlo, monospace;
   padding: 12px 16px;
-  border-bottom: 1px solid var(--obs-header-border, var(--background-modifier-border));
-  background-color: var(--obs-header-bg, var(--background-secondary));
-  color: var(--obs-banner-text-muted, var(--text-muted));
+  border-bottom: 1px solid var(--background-modifier-border);
+  background-color: var(--background-secondary);
+  color: var(--text-muted);
   gap: 8px;
-}
-
-/* Make banner transparent when custom background is active */
-.obsitermishell-terminal-container.has-custom-background .obsitermishell-terminal-banner {
-  background-color: transparent;
 }
 
 .obsitermishell-terminal-banner.is-hidden {
@@ -178,7 +121,7 @@
 .obsitermishell-banner-logo {
   margin: 0 0 8px 0;
   white-space: pre-line;
-  color: var(--obs-banner-text, var(--text-normal));
+  color: var(--text-normal);
   font-size: 12px;
   line-height: 1.2;
 }
@@ -189,7 +132,7 @@
   justify-content: center;
   gap: 6px;
   font-size: 12px;
-  color: var(--obs-banner-text-muted, var(--text-muted));
+  color: var(--text-muted);
   text-align: center;
   flex-wrap: wrap;
 }
@@ -228,73 +171,24 @@
 .obsitermishell-banner-link {
   padding: 4px 10px;
   border-radius: 4px;
-  border: 1px solid var(--obs-link-border, rgba(94, 186, 255, 0.45));
+  border: 1px solid rgba(94, 186, 255, 0.45);
   font-size: 12px;
   letter-spacing: 0.5px;
   text-transform: uppercase;
   font-weight: 600;
   text-decoration: none;
-  color: var(--obs-link-text, #7cc8ff);
-  background: var(--obs-link-bg, rgba(94, 186, 255, 0.15));
+  color: #7cc8ff;
+  background: rgba(94, 186, 255, 0.15);
   transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  cursor: pointer;
-  font-family: inherit;
-}
-
-.obsitermishell-banner-link.button {
-  appearance: none;
-}
-
-button.obsitermishell-banner-link {
-  appearance: none;
-  background: var(--obs-link-bg, rgba(94, 186, 255, 0.15));
-  color: var(--obs-link-text, #7cc8ff);
-  border: 1px solid var(--obs-link-border, rgba(94, 186, 255, 0.45));
 }
 
 .obsitermishell-banner-link:hover {
   transform: translateY(-1px);
-  background: var(--obs-link-bg-hover, rgba(94, 186, 255, 0.22));
+  background: rgba(94, 186, 255, 0.22);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
-}
-
-/* Coffee banner */
-.obsitermishell-coffee-banner {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 8px;
-  margin-top: 4px;
-  border-radius: 6px;
-  background: var(--obs-banner-bg, var(--background-secondary));
-  border: 1px dashed var(--obs-banner-border, var(--background-modifier-border));
-}
-
-/* Make coffee banner transparent with custom background */
-.obsitermishell-terminal-container.has-custom-background .obsitermishell-coffee-banner {
-  background: rgba(0, 0, 0, 0.3);
-  border-color: rgba(255, 255, 255, 0.2);
-}
-
-.obsitermishell-coffee-text {
-  font-size: 13px;
-  color: var(--obs-banner-text-muted, var(--text-muted));
-  font-weight: 500;
-}
-
-/* Background preview in settings */
-.obsitermishell-bg-preview {
-  display: flex;
-  justify-content: center;
-  padding: 8px;
-  margin-top: 8px;
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 4px;
-  background: var(--background-secondary);
 }
 
 .obsitermishell-terminal-host {
@@ -319,11 +213,6 @@ button.obsitermishell-banner-link {
 
 .obsitermishell-terminal-host .xterm-viewport::-webkit-scrollbar-track {
   background: var(--background-secondary);
-}
-
-/* Make scrollbar track transparent with custom background */
-.obsitermishell-terminal-container.has-custom-background .xterm-viewport::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.2);
 }
 
 .obsitermishell-terminal-host .xterm-viewport::-webkit-scrollbar-thumb {
@@ -904,7 +793,7 @@ button.obsitermishell-banner-link {
   padding: 12px 16px;
   border: 1px solid var(--background-modifier-border);
   border-radius: 8px;
-  background-color: var(--obs-header-bg, var(--background-secondary));
+  background-color: var(--background-secondary);
 }
 
 .obsitermishell-guide-title {
@@ -925,16 +814,16 @@ button.obsitermishell-banner-link {
   min-width: 140px;
   padding: 8px 10px;
   border-radius: 6px;
-  border: 1px solid var(--obs-guide-card-border, rgba(94, 186, 255, 0.35));
-  background: var(--obs-guide-card-bg, rgba(94, 186, 255, 0.08));
+  border: 1px solid rgba(94, 186, 255, 0.35);
+  background: rgba(94, 186, 255, 0.08);
   font-size: 12px;
-  color: var(--obs-guide-card-text-muted, var(--text-muted));
+  color: var(--text-muted);
 }
 
 .obsitermishell-guide-card strong {
   display: block;
   font-size: 12px;
-  color: var(--obs-guide-card-text, var(--text-normal));
+  color: var(--text-normal);
   margin-bottom: 4px;
 }
 
@@ -947,14 +836,14 @@ button.obsitermishell-banner-link {
   margin-left: auto;
   padding: 4px 10px;
   border-radius: 4px;
-  border: 1px solid var(--obs-link-border, rgba(94, 186, 255, 0.4));
+  border: 1px solid rgba(94, 186, 255, 0.4);
   background: transparent;
-  color: var(--obs-link-text, #7cc8ff));
+  color: #7cc8ff;
   cursor: pointer;
 }
 
 .obsitermishell-guide-dismiss:hover {
-  background: var(--obs-link-bg, rgba(94, 186, 255, 0.15));
+  background: rgba(94, 186, 255, 0.15);
 }
 
 /* Mobile notice */
@@ -992,7 +881,7 @@ button.obsitermishell-banner-link {
   margin: 8px 0;
   border: 1px solid var(--background-modifier-border);
   border-radius: 6px;
-  background-color: var(--obs-header-bg, var(--background-secondary));
+  background-color: var(--background-secondary);
 }
 
 .obsitermishell-settings-profile-header {

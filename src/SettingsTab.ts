@@ -7,6 +7,7 @@ import { App, PluginSettingTab, Setting } from 'obsidian';
 import ObsitermishellPlugin from './main';
 import { TerminalProfile, CursorAnimationStyle } from './types';
 import { ShellDetector } from './utils/shell-detector';
+import { getAllThemePresets, getThemePreset } from './utils/theme-presets';
 
 export class ObsitermishellSettingTab extends PluginSettingTab {
 	plugin: ObsitermishellPlugin;
@@ -23,6 +24,9 @@ export class ObsitermishellSettingTab extends PluginSettingTab {
 		// Header
 		containerEl.createEl('h2', { text: 'Obsitermishell Settings' });
 
+		// Profile settings
+		this.addProfileSettings(containerEl);
+
 		// Shell settings
 		this.addShellSettings(containerEl);
 
@@ -31,12 +35,6 @@ export class ObsitermishellSettingTab extends PluginSettingTab {
 
 		// Appearance settings
 		this.addAppearanceSettings(containerEl);
-
-		// Community/support settings
-		this.addCommunitySettings(containerEl);
-
-		// Profile settings
-		this.addProfileSettings(containerEl);
 	}
 
 	/**
@@ -145,6 +143,71 @@ export class ObsitermishellSettingTab extends PluginSettingTab {
 	 */
 	private addAppearanceSettings(containerEl: HTMLElement): void {
 		containerEl.createEl('h3', { text: 'Appearance' });
+
+		// Theme preset selector
+		const presets = getAllThemePresets();
+		const presetOptions: Record<string, string> = {
+			'obsidian': '🪨 Obsidian Adaptive',
+			'custom': '⚙️ Custom Settings',
+		};
+
+		// Add all theme presets to options
+		for (const preset of presets) {
+			if (preset.id !== 'obsidian') {
+				presetOptions[preset.id] = preset.name;
+			}
+		}
+
+		new Setting(containerEl)
+			.setName('Theme preset')
+			.setDesc('Choose a complete theme with cursor animation and colors')
+			.addDropdown((dropdown) => {
+				for (const [value, label] of Object.entries(presetOptions)) {
+					dropdown.addOption(value, label);
+				}
+				dropdown
+					.setValue(this.plugin.settings.activeThemePreset || 'obsidian')
+					.onChange(async (value) => {
+						this.plugin.settings.activeThemePreset = value;
+
+						// If a preset is selected, apply its settings
+						if (value !== 'custom' && value !== 'obsidian') {
+							const preset = getThemePreset(value);
+							if (preset) {
+								this.plugin.settings.cursorAnimation = preset.cursorAnimation;
+								this.plugin.settings.cursorAccent = preset.cursorAccent;
+							}
+						}
+
+						await this.plugin.saveSettings();
+						this.plugin.updateTerminalCursorSettings();
+
+						// Refresh settings display to show new values
+						this.display();
+					});
+			})
+			.addExtraButton((button) => {
+				button
+					.setIcon('info')
+					.setTooltip('View theme details')
+					.onClick(() => {
+						const preset = getThemePreset(this.plugin.settings.activeThemePreset);
+						if (preset) {
+							alert(`${preset.name}\n\n${preset.description}\n\nCursor: ${preset.cursorAnimation}`);
+						}
+					});
+			});
+
+		// Show theme description
+		const activePreset = getThemePreset(this.plugin.settings.activeThemePreset);
+		if (activePreset) {
+			containerEl.createDiv({
+				cls: 'setting-item-description',
+				text: `${activePreset.description}`,
+			});
+		}
+
+		containerEl.createEl('br');
 
 		// Font size
 		new Setting(containerEl)
@@ -277,68 +340,87 @@ export class ObsitermishellSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				})
 			);
-	}
 
-	/**
-	 * Community & support links section
-	 */
-	private addCommunitySettings(containerEl: HTMLElement): void {
-		containerEl.createEl('h3', { text: 'Links & Support' });
-
-		containerEl.createDiv({
-			cls: 'setting-item-description',
-			text: 'These links are shown in the terminal banner so users can reach you quickly.',
-		});
-
+		// Coffee button
 		new Setting(containerEl)
-			.setName('Donation link')
-			.setDesc('Displayed as "Donate" in the banner.')
-			.addText((text) =>
-				text
-					.setPlaceholder('https://github.com/sponsors/your-handle')
-					.setValue(this.plugin.settings.donationLink)
-					.onChange(async (value) => {
-						this.plugin.settings.donationLink = value.trim();
+			.setName('Show "Buy me a coffee" button')
+			.setDesc('Display the "Buy me a coffee" button in the terminal banner.')
+			.addToggle((toggle) =>
+				toggle.setValue(this.plugin.settings.showCoffeeBanner).onChange(async (value) => {
+					this.plugin.settings.showCoffeeBanner = value;
+					await this.plugin.saveSettings();
+					this.plugin.updateTerminalCursorSettings();
+				})
+			);
+
+		// Background image section header
+		containerEl.createEl('h4', { text: 'Terminal Background', cls: 'setting-item-heading' });
+
+		// Background image upload
+		new Setting(containerEl)
+			.setName('Background image')
+			.setDesc('Upload a custom background image for the terminal. Leave empty for no background.')
+			.addButton((button) =>
+				button
+					.setButtonText('Upload Image')
+					.setCta()
+					.onClick(async () => {
+						const input = document.createElement('input');
+						input.type = 'file';
+						input.accept = 'image/*';
+						input.onchange = async (e: Event) => {
+							const file = (e.target as HTMLInputElement).files?.[0];
+							if (file) {
+								const reader = new FileReader();
+								reader.onload = async (event) => {
+									const dataUrl = event.target?.result as string;
+									this.plugin.settings.backgroundImage = dataUrl;
+									await this.plugin.saveSettings();
+									this.plugin.updateTerminalCursorSettings();
+									this.display(); // Refresh settings to show current image
+								};
+								reader.readAsDataURL(file);
+							}
+						};
+						input.click();
+					})
+			)
+			.addButton((button) =>
+				button
+					.setButtonText('Clear')
+					.onClick(async () => {
+						this.plugin.settings.backgroundImage = '';
 						await this.plugin.saveSettings();
+						this.plugin.updateTerminalCursorSettings();
+						this.display();
 					})
 			);
 
-		new Setting(containerEl)
-			.setName('Work with me link')
-			.setDesc('Displayed as "Work With Me" in the banner.')
-			.addText((text) =>
-				text
-					.setPlaceholder('https://cal.com/you/consult')
-					.setValue(this.plugin.settings.workWithMeLink)
-					.onChange(async (value) => {
-						this.plugin.settings.workWithMeLink = value.trim();
-						await this.plugin.saveSettings();
-					})
-			);
+		// Show current background preview if exists
+		if (this.plugin.settings.backgroundImage) {
+			const previewContainer = containerEl.createDiv({ cls: 'obsitermishell-bg-preview' });
+			const previewImg = previewContainer.createEl('img', {
+				attr: { src: this.plugin.settings.backgroundImage },
+			});
+			previewImg.style.maxWidth = '200px';
+			previewImg.style.maxHeight = '150px';
+			previewImg.style.borderRadius = '4px';
+			previewImg.style.marginTop = '8px';
+		}
 
+		// Background opacity
 		new Setting(containerEl)
-			.setName('Repository link')
-			.setDesc('Displayed as "Repo" in the banner.')
-			.addText((text) =>
-				text
-					.setPlaceholder('https://github.com/you/obsitermishell')
-					.setValue(this.plugin.settings.repositoryLink)
+			.setName('Background opacity')
+			.setDesc('Adjust the opacity of the background image (0 = transparent, 1 = opaque).')
+			.addSlider((slider) =>
+				slider
+					.setLimits(0, 1, 0.05)
+					.setValue(this.plugin.settings.backgroundOpacity)
+					.setDynamicTooltip()
 					.onChange(async (value) => {
-						this.plugin.settings.repositoryLink = value.trim();
+						this.plugin.settings.backgroundOpacity = value;
 						await this.plugin.saveSettings();
-					})
-			);
-
-		new Setting(containerEl)
-			.setName('Website link')
-			.setDesc('Displayed as "Website" in the banner.')
-			.addText((text) =>
-				text
-					.setPlaceholder('https://your-site.com')
-					.setValue(this.plugin.settings.websiteLink)
-					.onChange(async (value) => {
-						this.plugin.settings.websiteLink = value.trim();
-						await this.plugin.saveSettings();
+						this.plugin.updateTerminalCursorSettings();
 					})
 			);
 	}

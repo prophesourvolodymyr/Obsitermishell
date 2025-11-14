@@ -268,13 +268,13 @@ export default class ObsitermishellPlugin extends Plugin {
 	}
 
 	/**
-	 * Update cursor style/blink/color for all terminals
+	 * Update cursor style/blink/color and UI theme for all terminals
 	 */
 	public updateTerminalCursorSettings(): void {
 		const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_TERMINAL);
 		for (const leaf of leaves) {
 			const view = leaf.view as TerminalView;
-			view.updateCursorAppearance();
+			view.updateTheme(); // This now updates both cursor AND UI theme
 		}
 	}
 

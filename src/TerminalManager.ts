@@ -40,7 +40,7 @@ export class TerminalManager extends EventEmitter {
 		// Create session
 		const session: TerminalSession = {
 			id: sessionId,
-			name: `${shellName} ${this.sessionCounter + 1}`,
+			name: options.profile?.name || `${shellName} ${this.sessionCounter + 1}`,
 			pty,
 			cwd,
 			profile: options.profile,

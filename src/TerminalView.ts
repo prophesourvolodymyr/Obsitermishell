@@ -3,16 +3,18 @@
  * Custom Obsidian view that renders xterm.js terminal with tabs for multiple sessions
  */
 
-import { ItemView, WorkspaceLeaf } from 'obsidian';
+import { ItemView, WorkspaceLeaf, Notice } from 'obsidian';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { SearchAddon } from '@xterm/addon-search';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { TerminalManager } from './TerminalManager';
-import { TerminalSession, ObsitermishellSettings, TerminalTheme, CursorAnimationStyle } from './types';
+import { TerminalSession, ObsitermishellSettings, TerminalTheme, CursorAnimationStyle, TerminalProfile } from './types';
 import { ThemeManager } from './utils/theme-manager';
 import { PlatformDetector } from './utils/platform-detector';
 import { ensureXtermStylesInjected } from './utils/style-injector';
+import { getThemePreset } from './utils/theme-presets';
+import { applyUITheme, removeUITheme } from './utils/ui-theme-injector';
 
 export const VIEW_TYPE_TERMINAL = 'obsitermishell-terminal';
 
@@ -39,6 +41,7 @@ export class TerminalView extends ItemView {
 	private guideOverlayEl: HTMLElement | null = null;
 	private guideDismissed = false;
 	private cursorOverlays: Map<string, CursorOverlayState> = new Map();
+	private profileSelectEl: HTMLSelectElement | null = null;
 	private firstCommandCaptured: Map<string, boolean> = new Map();
 	private commandBuffers: Map<string, string> = new Map();
 
@@ -75,6 +78,8 @@ export class TerminalView extends ItemView {
 		}
 
 		this.renderDesktopView();
+		this.applyUITheming();
+		this.applyTerminalBackground();
 	}
 
 	/**
@@ -107,6 +112,8 @@ export class TerminalView extends ItemView {
 		// Add action buttons
 		this.createActionButton('New', 'plus', () => this.createNewTerminal());
 		this.createActionButton('Clear', 'eraser', () => this.clearActiveTerminal());
+		this.createActionButton('Settings', 'gear', () => this.openPluginSettings());
+		this.renderProfileDropdown();
 
 		this.renderGuideOverlay();
 
@@ -135,6 +142,50 @@ export class TerminalView extends ItemView {
 		button.addEventListener('click', onClick);
 	}
 
+	private renderProfileDropdown(): void {
+		if (!this.actionsEl) return;
+		if (this.profileSelectEl) {
+			this.profileSelectEl.remove();
+			this.profileSelectEl = null;
+		}
+
+		const select = this.actionsEl.createEl('select', { cls: 'obsitermishell-profile-select' });
+		const placeholder = select.createEl('option', { text: 'Profiles' });
+		placeholder.value = '';
+		placeholder.selected = true;
+		placeholder.disabled = true;
+
+		for (const profile of this.settings.profiles) {
+			const option = select.createEl('option', { text: profile.name });
+			option.value = profile.id;
+		}
+
+		select.addEventListener('change', async (evt) => {
+			const value = (evt.target as HTMLSelectElement).value;
+			if (!value) return;
+
+			const profile = this.settings.profiles.find((p) => p.id === value);
+			if (!profile) {
+				new Notice('Profile not found.');
+				return;
+			}
+
+			try {
+				await this.terminalManager.createSession({
+					profile,
+					cwdMode: profile.cwdMode,
+				});
+			} catch (error) {
+				console.error('Failed to create profile terminal', error);
+				new Notice('Failed to launch profile terminal.');
+			} finally {
+				select.value = '';
+			}
+		});
+
+		this.profileSelectEl = select;
+	}
+
 	/**
 	 * Get icon SVG (simplified - in production use Obsidian's setIcon)
 	 */
@@ -142,9 +193,20 @@ export class TerminalView extends ItemView {
 		const icons: Record<string, string> = {
 			plus: '➕',
 			eraser: '🧹',
+			gear: '⚙️',
 			x: '✕',
 		};
 		return icons[icon] || icon;
+	}
+
+	/**
+	 * Open plugin settings
+	 */
+	private openPluginSettings(): void {
+		// @ts-ignore - accessing internal Obsidian API
+		this.app.setting.open();
+		// @ts-ignore
+		this.app.setting.openTabById('obsitermishell');
 	}
 
 	/**
@@ -330,7 +392,10 @@ export class TerminalView extends ItemView {
 
 		// Handle resize
 		terminal.onResize(({ cols, rows }) => {
-			session.pty.resize(cols, rows);
+			// Only resize if PTY is still alive
+			if (session.pty.alive()) {
+				session.pty.resize(cols, rows);
+			}
 		});
 
 		// Store references
@@ -368,7 +433,7 @@ export class TerminalView extends ItemView {
 	 */
 	private showTerminal(sessionId: string): void {
 		// Hide all terminals
-		for (const [id, terminal] of this.terminals.entries()) {
+		for (const [id] of this.terminals.entries()) {
 			const el = document.getElementById(`terminal-${id}`);
 			if (el) {
 				el.style.display = id === sessionId ? 'block' : 'none';
@@ -517,21 +582,39 @@ export class TerminalView extends ItemView {
 
 		this.addBannerSeparator(bannerEl);
 
-		const links = this.getBannerLinks();
-		if (links.length > 0) {
-			const linksEl = bannerEl.createDiv({ cls: 'obsitermishell-banner-links' });
-			for (const link of links) {
-				const anchor = linksEl.createEl('a', {
-					cls: 'obsitermishell-banner-link',
-					text: `[${link.label}]`,
-				});
-				anchor.href = link.url;
-				anchor.target = '_blank';
-				anchor.rel = 'noopener noreferrer';
-			}
+		// Combine all links and action buttons in one container
+		const linksEl = bannerEl.createDiv({ cls: 'obsitermishell-banner-links' });
 
-			this.addBannerSeparator(bannerEl);
+		// Add regular links
+		const links = this.getBannerLinks();
+		for (const link of links) {
+			const anchor = linksEl.createEl('a', {
+				cls: 'obsitermishell-banner-link',
+				text: `[${link.label}]`,
+			});
+			anchor.href = link.url;
+			anchor.target = '_blank';
+			anchor.rel = 'noopener noreferrer';
 		}
+
+		// Add action buttons
+		const customizeBtn = linksEl.createEl('button', {
+			cls: 'obsitermishell-banner-link',
+			text: '[Customize]',
+		});
+		customizeBtn.addEventListener('click', () => {
+			this.openPluginSettings();
+		});
+
+		const reportBugBtn = linksEl.createEl('a', {
+			cls: 'obsitermishell-banner-link',
+			text: '[Report Bug]',
+		});
+		reportBugBtn.href = 'https://github.com/yourusername/obsitermishell/issues';
+		reportBugBtn.target = '_blank';
+		reportBugBtn.rel = 'noopener noreferrer';
+
+		this.addBannerSeparator(bannerEl);
 	}
 
 	private addBannerSeparator(container: HTMLElement): void {
@@ -539,12 +622,22 @@ export class TerminalView extends ItemView {
 	}
 
 	private getBannerLinks(): { label: string; url: string }[] {
-		return [
-			{ label: 'Donate', url: this.settings.donationLink },
-			{ label: 'Work With Me', url: this.settings.workWithMeLink },
-			{ label: 'Repo', url: this.settings.repositoryLink },
-			{ label: 'Website', url: this.settings.websiteLink },
-		].filter((link) => link.url && link.url.trim().length > 0);
+		const links = [];
+
+		// Add coffee link only if setting is enabled
+		if (this.settings.showCoffeeBanner && this.settings.donationLink) {
+			links.push({ label: 'Buy me a coffee ☕', url: this.settings.donationLink });
+		}
+
+		// Add other links
+		if (this.settings.workWithMeLink && this.settings.workWithMeLink.trim().length > 0) {
+			links.push({ label: 'Work With Me', url: this.settings.workWithMeLink });
+		}
+		if (this.settings.websiteLink && this.settings.websiteLink.trim().length > 0) {
+			links.push({ label: 'Website', url: this.settings.websiteLink });
+		}
+
+		return links;
 	}
 
 	private getBannerLogo(width: number): string {
@@ -649,14 +742,41 @@ export class TerminalView extends ItemView {
 	}
 
 	private buildTheme(): TerminalTheme {
+		// Check if a theme preset is active
+		const presetId = this.settings.activeThemePreset;
+		if (presetId && presetId !== 'custom' && presetId !== 'obsidian') {
+			const preset = getThemePreset(presetId);
+			if (preset) {
+				// Use preset theme
+				const theme = { ...preset.theme };
+				// Make background transparent if custom image is set
+				if (this.settings.backgroundImage) {
+					theme.background = 'transparent';
+				}
+				return theme;
+			}
+		}
+
+		// Fall back to Obsidian adaptive theme or custom settings
 		const baseTheme = ThemeManager.getObsidianTheme();
 		const theme: TerminalTheme = { ...baseTheme };
+
+		// Apply custom overrides
 		if (this.settings.cursorAccent && this.settings.cursorAccent.trim().length > 0) {
 			theme.cursor = this.settings.cursorAccent;
 		}
 		if (this.settings.terminalForeground && this.settings.terminalForeground.trim().length > 0) {
 			theme.foreground = this.settings.terminalForeground;
 		}
+		if (this.settings.terminalBackground && this.settings.terminalBackground.trim().length > 0) {
+			theme.background = this.settings.terminalBackground;
+		}
+
+		// Make background transparent if custom image is set
+		if (this.settings.backgroundImage) {
+			theme.background = 'transparent';
+		}
+
 		return theme;
 	}
 
@@ -687,10 +807,50 @@ export class TerminalView extends ItemView {
 	 * Show welcome banner with ASCII art
 	 */
 	/**
-	 * Update theme for all terminals
+	 * Update theme for all terminals and UI
 	 */
 	public updateTheme(): void {
 		this.updateCursorAppearance();
+		this.applyUITheming();
+		this.applyTerminalBackground();
+	}
+
+	/**
+	 * Apply UI theming from preset
+	 */
+	private applyUITheming(): void {
+		const presetId = this.settings.activeThemePreset;
+		if (presetId && presetId !== 'custom' && presetId !== 'obsidian') {
+			const preset = getThemePreset(presetId);
+			if (preset && preset.uiColors) {
+				applyUITheme(preset.uiColors);
+				return;
+			}
+		}
+		// Remove custom theming if using Obsidian or custom mode
+		removeUITheme();
+	}
+
+	/**
+	 * Apply background image to terminal
+	 */
+	private applyTerminalBackground(): void {
+		if (!this.terminalContainerEl) return;
+
+		const backgroundImage = this.settings.backgroundImage;
+		const opacity = this.settings.backgroundOpacity;
+
+		if (backgroundImage) {
+			// Apply background image with opacity using CSS custom properties
+			this.terminalContainerEl.style.setProperty('--bg-image', `url(${backgroundImage})`);
+			this.terminalContainerEl.style.setProperty('--bg-opacity', String(opacity));
+			this.terminalContainerEl.addClass('has-custom-background');
+		} else {
+			// Remove background
+			this.terminalContainerEl.style.removeProperty('--bg-image');
+			this.terminalContainerEl.style.removeProperty('--bg-opacity');
+			this.terminalContainerEl.removeClass('has-custom-background');
+		}
 	}
 
 	async onClose(): Promise<void> {

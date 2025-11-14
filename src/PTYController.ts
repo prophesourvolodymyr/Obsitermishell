@@ -260,8 +260,9 @@ export class PTYController extends EventEmitter {
 	 * Write data to the PTY
 	 */
 	public write(data: string): void {
-		if (!this.ptyId) {
-			throw new Error('PTY not spawned');
+		if (!this.ptyId || !this.isAlive) {
+			console.warn('[PTYController] Cannot write: PTY not alive');
+			return;
 		}
 
 		this.sendToDaemon({
@@ -275,7 +276,7 @@ export class PTYController extends EventEmitter {
 	 * Resize the PTY
 	 */
 	public resize(cols: number, rows: number): void {
-		if (!this.ptyId) {
+		if (!this.ptyId || !this.isAlive) {
 			return;
 		}
 

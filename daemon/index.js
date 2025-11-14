@@ -178,7 +178,7 @@ function handleCreate(ws, msg) {
 function handleData(ws, msg) {
   const session = sessions.get(msg.id);
   if (!session) {
-    console.warn(`[PTY Daemon] Session ${msg.id} not found for data`);
+    // Session already closed - silently ignore (client should prevent this)
     return;
   }
 
@@ -192,7 +192,7 @@ function handleData(ws, msg) {
 function handleResize(ws, msg) {
   const session = sessions.get(msg.id);
   if (!session) {
-    console.warn(`[PTY Daemon] Session ${msg.id} not found for resize`);
+    // Session already closed - silently ignore (client should prevent this)
     return;
   }
 

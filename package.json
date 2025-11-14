@@ -11,7 +11,8 @@
     "rebuild:obsidian": "npx @electron/rebuild -f -w node-pty -v 25.8.4",
     "check": "tsc -noEmit",
     "format": "prettier --write .",
-    "postinstall": "npm run rebuild:obsidian"
+    "postinstall": "npm run rebuild:obsidian",
+    "auto-commit": "node scripts/auto-commit-watcher.js"
   },
   "keywords": [
     "obsidian",
@@ -31,8 +32,10 @@
     "esbuild": "0.19.11",
     "obsidian": "latest",
     "prettier": "^3.2.4",
+    "simple-git": "^3.21.0",
     "tslib": "^2.6.2",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "chokidar": "^3.6.0"
   },
   "dependencies": {
     "@xterm/addon-fit": "^0.10.0",
