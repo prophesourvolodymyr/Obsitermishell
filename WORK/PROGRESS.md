@@ -110,3 +110,4 @@
 | 2025-11-12 | Converted coffee banner to toggle setting | Changed from dismissible popup to settings toggle with "Show coffee banner" option |
 | 2025-11-12 | Enhanced button theme adaptation | Ensured all buttons follow UI theme CSS variable rules for consistent theming |
 | 2025-11-12 | **Added custom background image feature** | Users can upload images, adjust opacity (0-1), preview in settings. Background with overlay for opacity control |
+| 2025-11-12 | Documented user TODO logging rules | Updated `WORK/CODEBASE- GENERAL-AI-GUIDE.md` to clarify that AI must write user-only tasks into `WORK/USER TODO.md` |

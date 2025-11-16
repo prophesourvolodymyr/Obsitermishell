@@ -36,6 +36,8 @@ Keep these features in mind when triaging bugs or proposing enhancements.
 2. **`WORK/USER GUIDE.md`** – user-facing instructions (API setup, deployment steps, usage tips). Update only when the user asks. Never dump dev/feature specs here.
 3. **`JUNK/*.md`** – temporary explanations. Only create/update when requested. Use this space for feature deep-dives or setup docs the user specifically wants to see.
 
+**User TODO tracking:** Whenever the user assigns new TODOs, asks for a task list, or you need to hand back an item the AI cannot complete (e.g., “grab an API key”), record it in `WORK/USER TODO.md` so the user has one consolidated action list.
+
 Whenever you finish work, run this checklist: “Did I update Progress.md? Did the user ask for a guide? Did they request a write-up in JUNK?”
 
 ---
